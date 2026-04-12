@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>МОБИЛИЗАЦИЯ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020804;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace}
+canvas{display:block;box-shadow:0 0 60px rgba(30,100,15,.18)}
+#ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,4,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10}
+.ot{font-size:34px;color:#C8A000;letter-spacing:4px;font-weight:bold;text-align:center}
+.os{font-size:11px;color:#3a6020;line-height:2.3;text-align:center;max-width:420px}
+.ob{border:1px solid #4a8a30;background:#0a140a;color:#7ab060;font-size:12px;padding:10px 30px;cursor:pointer;letter-spacing:2px}
+.ob:hover{background:#122010}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ov">
+  <div class="ot">МОБИЛИЗАЦИЯ</div>
+  <div class="os">
+    🏠 Левая база — твоя &nbsp;·&nbsp; Правая — противник<br>
+    🟢 Зайди в зелёный проход → включится змейка<br>
+    📦 Собирай ресурсы · 🪖 Подбирай бойцов в хвост<br>
+    ⚠ Стена 1й раз = теряешь рюкзак · 2й = смерть<br>
+    ◄ Вернись через проход → ресурсы зачтутся на базе
+  </div>
+  <button class="ob" onclick="startGame()">▶ НАЧАТЬ</button>
+</div>
+<script>
+const CELL = 30;
+const BASE_C = 6;
+const FIELD_C = 16;
+const ROWS = 18;
+const TC = BASE_C + FIELD_C + BASE_C;
+const CW = TC * CELL;
+const CH = ROWS * CELL;
+const DOOR = [7, 8, 9, 10];
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = CW;
+canvas.height = CH;
+
+const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+const inPBase  = (c, r) => c >= 0 && c < BASE_C && r >= 0 && r < ROWS;
+const inEBase  = (c, r) => c >= BASE_C + FIELD_C && c < TC && r >= 0 && r < ROWS;
+const inField  = (c, r) => c >= BASE_C && c < BASE_C + FIELD_C && r >= 0 && r < ROWS;
+const isDoor   = (c, r) => DOOR.includes(r);
+const P_DOOR_COL  = BASE_C - 1;
+const P_FIELD_COL = BASE_C;
+const E_DOOR_COL  = BASE_C + FIELD_C;
+const E_FIELD_COL = BASE_C + FIELD_C - 1;
+
+let P, E, running = false;
+let items = [], hazards = [], explosions = [], fx = [], graves = [];
+let itemT = 0, hazT = 0, aiT = 0, last = -1;
+let crashed = false;
+let frameCount = 0;
+
+function mkUnit(isP) {
+  return {
+    col: isP ? 2 : TC - 3,
+    row: ROWS >> 1,
+    tail: [],
+    dir: { dc: isP ? 1 : -1, dr: 0 },
+    nxt: { dc: isP ? 1 : -1, dr: 0 },
+    vdc: 0, vdr: 0,
+    mode: 'base',
+    hp: 2,
+    carry: 0,
+    res: 0,
+    soldiers: 0,
+    snT: 0, mvT: 0,
+    alive: true, respT: 0, isP,
+  };
+}
+
+function startGame() {
+  try {
+    document.getElementById('ov').style.display = 'none';
+    P = mkUnit(true);
+    E = mkUnit(false);
+    items = []; hazards = []; explosions = []; fx = []; graves = [];
+    itemT = 0; hazT = 8000; aiT = 0;
+    for (let i = 0; i < 18; i++) spawnItem();
+    spawnHaz(); spawnHaz();
+    running = true;
+    crashed = false;
+    requestAnimationFrame(loop);
+  } catch (err) {
+    alert('startGame error: ' + err.message + '\n\n' + (err.stack || ''));
+  }
+}
+
+const IDEF = [
+  { t: 'supply', w: 5, v: 12 },
+  { t: 'crate',  w: 3, v: 35 },
+  { t: 'medkit', w: 2, v: 0  },
+  { t: 'recruit',w: 2, v: 20 },
+];
+const IDEF_TOT = IDEF.reduce((s, t) => s + t.w, 0);
+
+function spawnItem() {
+  const occ = new Set();
+  [P, E].forEach(u => { if (u) { occ.add(u.col + ',' + u.row); u.tail.forEach(t => occ.add(t.col + ',' + t.row)); } });
+  items.forEach(i => occ.add(i.col + ',' + i.row));
+  hazards.forEach(h => occ.add(h.col + ',' + h.row));
+  for (let t = 0; t < 400; t++) {
+    const col = BASE_C + 1 + Math.floor(Math.random() * (FIELD_C - 2));
+    const row = 1 + Math.floor(Math.random() * (ROWS - 2));
+    if (!occ.has(col + ',' + row)) {
+      let r = Math.random() * IDEF_TOT, ch = IDEF[0];
+      for (const tp of IDEF) { r -= tp.w; if (r <= 0) { ch = tp; break; } }
+      items.push({ col, row, t: ch.t, v: ch.v });
+      return;
+    }
+  }
+}
+
+// FIX: мина не спавнится на игроках, хвостах, предметах
+function spawnHaz() {
+  const occ = new Set();
+  [P, E].forEach(u => {
+    if (!u) return;
+    occ.add(u.col + ',' + u.row);
+    u.tail.forEach(t => occ.add(t.col + ',' + t.row));
+  });
+  items.forEach(i => occ.add(i.col + ',' + i.row));
+  hazards.forEach(h => occ.add(h.col + ',' + h.row));
+  for (let t = 0; t < 200; t++) {
+    const col = BASE_C + 2 + Math.floor(Math.random() * (FIELD_C - 4));
+    const row = 2 + Math.floor(Math.random() * (ROWS - 4));
+    if (!occ.has(col + ',' + row)) {
+      const mT = ri(3500, 6000);
+      hazards.push({ col, row, timer: mT, maxT: mT });
+      return;
+    }
+  }
+}
+
+const BASE_SPD  = 140;
+const SNAKE_SPD = 270;
+
+function moveUnit(u, dt) {
+  if (!u.alive) { u.respT -= dt; if (u.respT <= 0) respawn(u); return; }
+
+  if (u.mode === 'base') {
+    u.mvT += dt;
+    if (u.mvT < BASE_SPD) return;
+    u.mvT -= BASE_SPD;
+    if (u.vdc === 0 && u.vdr === 0) return;
+
+    const nc = u.col + u.vdc;
+    const nr = u.row + u.vdr;
+
+    if (u.isP && inPBase(nc, nr)) { u.col = nc; u.row = nr; return; }
+    if (!u.isP && inEBase(nc, nr)) { u.col = nc; u.row = nr; return; }
+
+    if (u.isP && nc === P_FIELD_COL && isDoor(nc, nr) && u.vdc === 1) {
+      enterSnake(u, nc, nr); return;
+    }
+    if (!u.isP && nc === E_FIELD_COL && isDoor(nc, nr) && u.vdc === -1) {
+      enterSnake(u, nc, nr); return;
+    }
+
+  } else {
+    u.snT += dt;
+    if (u.snT < SNAKE_SPD) return;
+    u.snT -= SNAKE_SPD;
+
+    u.dir = { ...u.nxt };
+    const nc = u.col + u.dir.dc;
+    const nr = u.row + u.dir.dr;
+
+    if (u.isP && inPBase(nc, nr) && isDoor(nc, nr)) { returnBase(u, nc, nr); return; }
+    if (!u.isP && inEBase(nc, nr) && isDoor(nc, nr)) { returnBase(u, nc, nr); return; }
+
+    if (!inField(nc, nr)) { hitWall(u); return; }
+
+    u.tail.unshift({ col: u.col, row: u.row });
+    const maxLen = Math.max(1, u.soldiers);
+    if (u.tail.length > maxLen) u.tail.pop();
+
+    u.col = nc; u.row = nr;
+
+    const ii = items.findIndex(i => i.col === nc && i.row === nr);
+    if (ii !== -1) {
+      const it = items.splice(ii, 1)[0];
+      collect(u, it);
+      if (items.length < 14) spawnItem();
+    }
+
+    const hi = hazards.findIndex(h => h.col === nc && h.row === nr);
+    if (hi !== -1) { hazards.splice(hi, 1); hitWall(u); }
+  }
+}
+
+// FIX: пустой хвост (не светим клетку базы) + готовность к мгновенному ходу
+function enterSnake(u, nc, nr) {
+  u.mode = 'snake';
+  u.tail = [];
+  u.col = nc; u.row = nr;
+  u.dir = { dc: u.isP ? 1 : -1, dr: 0 };
+  u.nxt = { ...u.dir };
+  u.snT = SNAKE_SPD;
+}
+
+function returnBase(u, nc, nr) {
+  u.mode = 'base';
+  u.col = nc; u.row = nr;
+  if (u.carry > 0) {
+    u.res += u.carry;
+    if (u.isP) addFx(u.col * CELL + CELL / 2, u.row * CELL + CELL / 2, '+' + u.carry + ' 💰', '#FFD700', 2000);
+  }
+  u.carry = 0; u.hp = 2; u.tail = [];
+  u.vdc = 0; u.vdr = 0;
+  u.mvT = 0; u.snT = 0;
+}
+
+function hitWall(u) {
+  if (u.hp === 2) {
+    u.carry = 0; u.hp = 1; u.tail = [];
+    if (u.isP) addFx(u.col * CELL + CELL / 2, u.row * CELL, '⚠ рюкзак потерян!', '#FF8800', 1500);
+  } else {
+    u.alive = false; u.carry = 0;
+    graves.push({ col: u.col, row: u.row, life: 2500, isP: u.isP });
+    u.tail = [];
+    u.respT = 2800; u.mode = 'base';
+    if (u.isP) addFx(CW / 2, CH / 2, '☠ ГИБЕЛЬ', '#CC1111', 2200);
+  }
+}
+
+// FIX: сброс таймеров на респавне
+function respawn(u) {
+  u.alive = true; u.hp = 2; u.carry = 0; u.tail = [];
+  u.col = u.isP ? 2 : TC - 3;
+  u.row = ROWS >> 1;
+  u.mode = 'base'; u.vdc = 0; u.vdr = 0;
+  u.snT = 0; u.mvT = 0;
+  u.soldiers = 0;
+}
+
+function collect(u, it) {
+  if (it.t === 'supply' || it.t === 'crate') {
+    u.carry += it.v;
+    if (u.isP) addFx(it.col * CELL + CELL / 2, it.row * CELL, '+' + it.v, '#88FF88', 900);
+  } else if (it.t === 'medkit') {
+    u.hp = 2;
+    if (u.isP) addFx(it.col * CELL + CELL / 2, it.row * CELL, '❤ HP', '#FF7777', 900);
+  } else if (it.t === 'recruit') {
+    u.carry += it.v; u.soldiers++;
+    u.tail.push({ col: u.col, row: u.row });
+    if (u.isP) addFx(it.col * CELL + CELL / 2, it.row * CELL, '+боец!', '#88FF44', 1100);
+  }
+}
+
+function checkColl() {
+  if (!P || !E || !P.alive || !E.alive) return;
+  if (P.mode === 'snake' && E.mode === 'snake') {
+    if (P.col === E.col && P.row === E.row) { hitWall(P); hitWall(E); return; }
+    if (E.tail.some(t => t.col === P.col && t.row === P.row)) { hitWall(P); return; }
+    if (P.tail.some(t => t.col === E.col && t.row === E.row)) hitWall(E);
+  }
+}
+
+// FIX: AI врага — теперь реально доходит до прохода и выходит на поле
+function updateAI(dt) {
+  aiT += dt; if (aiT < 330) return; aiT = 0;
+  const u = E; if (!u.alive) return;
+
+  if (u.mode === 'base') {
+    const tc = E_DOOR_COL;
+    const tr = (DOOR[0] + DOOR[DOOR.length - 1]) >> 1;
+    if (u.row !== tr)    { u.vdc = 0;  u.vdr = Math.sign(tr - u.row); }
+    else if (u.col > tc) { u.vdc = -1; u.vdr = 0; }
+    else                 { u.vdc = -1; u.vdr = 0; }
+  } else {
+    if (u.carry > 80) {
+      const tr = (DOOR[0] + DOOR[DOOR.length - 1]) >> 1;
+      if (u.row !== tr) {
+        const nd = { dc: 0, dr: Math.sign(tr - u.row) };
+        if (!(nd.dr === -u.dir.dr && u.dir.dr !== 0)) u.nxt = nd;
+      } else {
+        u.nxt = { dc: 1, dr: 0 };
+      }
+      return;
+    }
+    if (!items.length) { u.nxt = { dc: -1, dr: 0 }; return; }
+    let best = null, bd = 9999;
+    items.forEach(it => {
+      const d = Math.abs(it.col - u.col) + Math.abs(it.row - u.row);
+      if (d < bd) { bd = d; best = it; }
+    });
+    const dc = best.col - u.col, dr = best.row - u.row;
+    let nd = Math.random() < 0.18
+      ? [{ dc: 1, dr: 0 }, { dc: -1, dr: 0 }, { dc: 0, dr: 1 }, { dc: 0, dr: -1 }][Math.floor(Math.random() * 4)]
+      : Math.abs(dc) > Math.abs(dr) ? { dc: Math.sign(dc), dr: 0 } : { dc: 0, dr: Math.sign(dr) };
+    if (!(nd.dc === -u.dir.dc && u.dir.dc !== 0) && !(nd.dr === -u.dir.dr && u.dir.dr !== 0))
+      u.nxt = nd;
+  }
+}
+
+function updateHaz(dt) {
+  hazards.forEach(h => {
+    h.timer -= dt;
+    if (h.timer <= 0) {
+      explosions.push({ col: h.col, row: h.row, l: 700, ml: 700 });
+      [P, E].forEach(u => {
+        if (u && u.alive && u.mode === 'snake' && Math.abs(u.col - h.col) <= 1 && Math.abs(u.row - h.row) <= 1)
+          hitWall(u);
+      });
+      h.dead = true;
+    }
+  });
+  hazards = hazards.filter(h => !h.dead);
+  explosions = explosions.filter(e => { e.l -= 16; return e.l > 0; });
+}
+
+function addFx(x, y, txt, col, life) { fx.push({ x, y, txt, col, life, ml: life }); }
+
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (!P || !P.alive) return;
+  if (P.mode === 'snake') {
+    const M = {
+      ArrowUp: { dc: 0, dr: -1 }, KeyW: { dc: 0, dr: -1 },
+      ArrowDown: { dc: 0, dr: 1 }, KeyS: { dc: 0, dr: 1 },
+      ArrowLeft: { dc: -1, dr: 0 }, KeyA: { dc: -1, dr: 0 },
+      ArrowRight: { dc: 1, dr: 0 }, KeyD: { dc: 1, dr: 0 },
+    };
+    if (M[e.code]) {
+      const d = M[e.code];
+      if (!(d.dc === -P.dir.dc && P.dir.dc !== 0) && !(d.dr === -P.dir.dr && P.dir.dr !== 0))
+        P.nxt = d;
+    }
+  }
+  if (e.code === 'KeyR' && confirm('Перезапустить игру?')) startGame();
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+function handleBaseKeys() {
+  if (!P || !P.alive || P.mode !== 'base') return;
+  if (keys['ArrowUp'] || keys['KeyW'])         { P.vdc = 0; P.vdr = -1; }
+  else if (keys['ArrowDown'] || keys['KeyS'])  { P.vdc = 0; P.vdr = 1; }
+  else if (keys['ArrowLeft'] || keys['KeyA'])  { P.vdc = -1; P.vdr = 0; }
+  else if (keys['ArrowRight'] || keys['KeyD']) { P.vdc = 1; P.vdr = 0; }
+  else { P.vdc = 0; P.vdr = 0; }
+}
+
+canvas.addEventListener('click', e => {
+  if (!P || !P.alive || P.mode !== 'snake') return;
+  const r = canvas.getBoundingClientRect();
+  const mx = (e.clientX - r.left) / r.width * CW;
+  const my = (e.clientY - r.top) / r.height * CH;
+  const hx = P.col * CELL + CELL / 2, hy = P.row * CELL + CELL / 2;
+  const dx = mx - hx, dy = my - hy;
+  let nd = Math.abs(dx) > Math.abs(dy) ? { dc: dx > 0 ? 1 : -1, dr: 0 } : { dc: 0, dr: dy > 0 ? 1 : -1 };
+  if (!(nd.dc === -P.dir.dc && P.dir.dc !== 0) && !(nd.dr === -P.dir.dr && P.dir.dr !== 0)) P.nxt = nd;
+});
+
+function drawVignette() {
+  if (!P || !P.alive || P.hp > 1) return;
+  const pulse = 0.3 + 0.2 * Math.sin(frameCount / 6);
+  ctx.fillStyle = `rgba(180,20,10,${pulse})`;
+  // Пиксельные квадраты по краям
+  for (let i = 0; i < 20; i++) {
+    const s = 6;
+    ctx.fillRect(i * 14, 0, s, s * (1 + Math.sin(i + frameCount / 10) * 0.5));
+    ctx.fillRect(i * 14, CH - s, s, s);
+    ctx.fillRect(0, i * 14, s, s);
+    ctx.fillRect(CW - s, i * 14, s, s);
+  }
+  // Рамка градиентом
+  const g = ctx.createRadialGradient(CW / 2, CH / 2, Math.min(CW, CH) * 0.3, CW / 2, CH / 2, Math.max(CW, CH) * 0.7);
+  g.addColorStop(0, 'rgba(180,20,10,0)');
+  g.addColorStop(1, `rgba(140,10,5,${pulse * 0.8})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CW, CH);
+}
+
+function render() {
+  frameCount++;
+  ctx.fillStyle = '#020804'; ctx.fillRect(0, 0, CW, CH);
+  drawBases();
+  drawField();
+  drawItems();
+  drawHazards();
+  drawExplosions();
+  drawUnits();
+  drawFX();
+  drawVignette();
+  drawHUD();
+}
+
+function drawBases() {
+  const pw = BASE_C * CELL;
+  const ew = BASE_C * CELL;
+  const ex = (BASE_C + FIELD_C) * CELL;
+
+  const gl = ctx.createLinearGradient(0, 0, pw, 0);
+  gl.addColorStop(0, '#030B04'); gl.addColorStop(1, '#071508');
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, pw, CH);
+
+  const gr = ctx.createLinearGradient(ex, 0, ex + ew, 0);
+  gr.addColorStop(0, '#0E0505'); gr.addColorStop(1, '#060303');
+  ctx.fillStyle = gr; ctx.fillRect(ex, 0, ew, CH);
+
+  ctx.lineWidth = 0.4;
+  for (let c = 0; c < BASE_C; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      ctx.strokeStyle = 'rgba(20,50,12,.2)';
+      ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+    }
+  }
+  for (let c = BASE_C + FIELD_C; c < TC; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      ctx.strokeStyle = 'rgba(50,15,12,.2)';
+      ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+    }
+  }
+
+  drawWallStrip(pw - 10, 0, 10, CH, '#142E0E', '#1C380E', '#0C1A08', true);
+  drawWallStrip(ex, 0, 10, CH, '#2A0E0E', '#341010', '#1A0808', false);
+
+  const d0 = DOOR[0] * CELL, dH = DOOR.length * CELL;
+  ctx.fillStyle = '#050E04'; ctx.fillRect(pw - 10, d0, 10, dH);
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 480);
+  ctx.strokeStyle = `rgba(60,200,40,${0.4 + 0.3 * pulse})`; ctx.lineWidth = 2;
+  ctx.strokeRect(pw - 9, d0 + 1, 7, dH - 2);
+  ctx.fillStyle = `rgba(70,210,50,${0.5 + 0.3 * pulse})`;
+  ctx.font = '11px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('►', pw - 5, d0 + dH / 2 + 4);
+
+  ctx.fillStyle = '#100505'; ctx.fillRect(ex, d0, 10, dH);
+  ctx.strokeStyle = `rgba(200,50,50,0.45)`; ctx.lineWidth = 2;
+  ctx.strokeRect(ex + 1, d0 + 1, 7, dH - 2);
+  ctx.fillStyle = `rgba(200,60,60,0.55)`;
+  ctx.font = '11px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('◄', ex + 5, d0 + dH / 2 + 4);
+
+  ctx.fillStyle = '#325A22'; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('▌ ТВОЯ БАЗА ▐', pw / 2, 14);
+  hline(6, pw - 16, 19, '#162E0E');
+  ctx.fillStyle = '#5A2020'; ctx.font = 'bold 9px Courier New';
+  ctx.fillText('▌ ВРАГ ▐', ex + ew / 2, 14);
+  hline(ex + 6, ex + ew - 6, 19, '#2E0E0E');
+
+  ctx.fillStyle = '#4A7830'; ctx.font = '8px Courier New'; ctx.fillText('РЕСУРСЫ', pw / 2, 34);
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px Courier New'; ctx.fillText(P ? P.res : 0, pw / 2, 58);
+  if (P && P.carry > 0) { ctx.fillStyle = '#88CC44'; ctx.font = '8px Courier New'; ctx.fillText('+' + P.carry + ' рюкзак', pw / 2, 72); }
+  // Гора ящиков (5 уровней)
+  if (P) {
+    const lvl = Math.min(5, Math.floor(P.res / 100));
+    const bx = pw / 2 - 28, by = CH - 130;
+    for (let row = 0; row < lvl; row++) {
+      const wCount = 4 - row;
+      for (let bi = 0; bi < wCount; bi++) {
+        const x = bx + bi * 14 + row * 7;
+        const y = by - row * 11;
+        ctx.fillStyle = '#6A4A18';
+        ctx.fillRect(x, y, 12, 9);
+        ctx.fillStyle = '#4A3010';
+        ctx.fillRect(x, y, 12, 2);
+        ctx.fillRect(x + 5, y + 2, 2, 7);
+        ctx.strokeStyle = '#2A1808'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, 12, 9);
+      }
+    }
+    // Костёр при высокой горе
+    if (lvl >= 3) {
+      const fy = by - lvl * 11 - 4;
+      const flick = Math.floor(frameCount / 4) % 3;
+      ctx.fillStyle = flick === 0 ? '#FF6600' : flick === 1 ? '#FF9922' : '#FFCC44';
+      ctx.beginPath();
+      ctx.moveTo(pw / 2, fy - 6);
+      ctx.lineTo(pw / 2 - 4, fy + 2);
+      ctx.lineTo(pw / 2 + 4, fy + 2);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#FFEE66';
+      ctx.fillRect(pw / 2 - 1, fy - 3, 2, 3);
+    }
+  }
+  hline(6, pw - 16, 78, '#162E0E');
+  ctx.fillStyle = '#4A7830'; ctx.font = '8px Courier New'; ctx.fillText('ОТРЯД', pw / 2, 92);
+  ctx.fillStyle = '#8AB870'; ctx.font = 'bold 10px Courier New';
+  ctx.fillText((P ? P.soldiers : 0) + ' бойцов', pw / 2, 106);
+  if (P) {
+    ctx.fillStyle = P.mode === 'snake' ? '#88DD44' : '#4A7830';
+    ctx.font = 'bold 8px Courier New';
+    ctx.fillText(P.mode === 'snake' ? '🐍 НА ПОЛЕ' : '🏠 НА БАЗЕ', pw / 2, 120);
+    if (!P.alive) {
+      ctx.fillStyle = 'rgba(200,50,30,.6)'; ctx.font = '9px Courier New';
+      ctx.fillText('☠ ' + (P.respT / 1000).toFixed(1) + 's', pw / 2, CH * 0.6);
+    }
+  }
+  hline(6, pw - 16, CH - 50, '#162E0E');
+  ctx.fillStyle = '#2A4018'; ctx.font = '7px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('WASD — движение', pw / 2, CH - 36);
+  ctx.fillText('► зелёный проход = поле', pw / 2, CH - 24);
+  ctx.fillText('◄ вернись = зачёт ресурсов', pw / 2, CH - 12);
+
+  ctx.fillStyle = 'rgba(90,30,30,.6)'; ctx.font = '8px Courier New';
+  ctx.fillText('РЕСУРСЫ', ex + ew / 2, 34);
+  ctx.fillStyle = '#FF6040'; ctx.font = 'bold 22px Courier New';
+  ctx.fillText(E ? E.res : 0, ex + ew / 2, 58);
+  ctx.fillStyle = 'rgba(8,3,3,.72)'; ctx.fillRect(ex + 12, 24, ew - 14, CH - 28);
+  const t = Date.now() / 1000;
+  for (let i = 0; i < 8; i++) {
+    const fogX = ex + 20 + Math.sin(t * .2 + i * 1.4) * 34;
+    const fogY = 36 + i * 50 + Math.cos(t * .16 + i * .9) * 12;
+    ctx.fillStyle = `rgba(20,6,6,${.2 + Math.sin(t * .25 + i) * .06})`;
+    ctx.beginPath(); ctx.arc(fogX, fogY, 16 + Math.sin(t * .3 + i) * 4, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(100,30,30,.55)'; ctx.font = 'bold 26px Courier New';
+  ctx.fillText('?', ex + ew / 2, CH / 2 - 10);
+  ctx.font = '8px Courier New'; ctx.fillStyle = 'rgba(90,30,30,.5)';
+  ctx.fillText(E && E.mode === 'snake' ? '◄ на поле' : '· на базе', ex + ew / 2, CH - 14);
+}
+
+function drawField() {
+  const fxPx = BASE_C * CELL;
+  ctx.fillStyle = '#07100A'; ctx.fillRect(fxPx, 0, FIELD_C * CELL, CH);
+  ctx.strokeStyle = 'rgba(22,45,11,.28)'; ctx.lineWidth = .5;
+  for (let c = BASE_C; c <= BASE_C + FIELD_C; c++) {
+    ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, CH); ctx.stroke();
+  }
+  for (let r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(fxPx, r * CELL); ctx.lineTo(fxPx + FIELD_C * CELL, r * CELL); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(160,30,20,.65)'; ctx.lineWidth = 2;
+  const lx = BASE_C * CELL;
+  ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, DOOR[0] * CELL); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx, (DOOR[DOOR.length - 1] + 1) * CELL); ctx.lineTo(lx, CH); ctx.stroke();
+  const rx = (BASE_C + FIELD_C) * CELL;
+  ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx, DOOR[0] * CELL); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rx, (DOOR[DOOR.length - 1] + 1) * CELL); ctx.lineTo(rx, CH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(rx, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx, CH); ctx.lineTo(rx, CH); ctx.stroke();
+
+  const pulse = .5 + .5 * Math.sin(Date.now() / 400);
+  const dh = DOOR.length * CELL;
+  ctx.fillStyle = `rgba(40,190,60,${.08 + .05 * pulse})`;
+  ctx.fillRect(lx - 2, DOOR[0] * CELL, CELL + 2, dh);
+  ctx.fillRect(rx - CELL - 2, DOOR[0] * CELL, CELL + 4, dh);
+  // Граффити-стрелка "ЭВАКУАЦИЯ" — левый проход (указывает вправо в поле)
+  const dmy = (DOOR[0] + DOOR[DOOR.length - 1]) / 2 * CELL + CELL / 2;
+  ctx.fillStyle = `rgba(90,255,90,${.55 + .25 * pulse})`;
+  // Неровная стрелка из пикселей
+  const drawSprayArrow = (sx, sy, dir) => {
+    const d = dir; // 1 вправо, -1 влево
+    for (let i = 0; i < 14; i++) {
+      const jitter = (Math.sin(i * 1.7) * 1.5) | 0;
+      ctx.fillRect(sx + i * 2 * d, sy + jitter, 2, 2);
+    }
+    // Наконечник
+    for (let i = 0; i < 6; i++) {
+      ctx.fillRect(sx + (14 - i) * 2 * d, sy - i - 1, 2, 2);
+      ctx.fillRect(sx + (14 - i) * 2 * d, sy + i + 1, 2, 2);
+    }
+  };
+  drawSprayArrow(lx + 4, dmy, 1);
+  drawSprayArrow(rx - 4, dmy, -1);
+  // Брызги краски
+  ctx.fillStyle = `rgba(60,220,60,${.3 + .15 * pulse})`;
+  for (let i = 0; i < 5; i++) {
+    const sx = lx + 6 + i * 5, sy = dmy - 12 + (i % 2) * 20;
+    ctx.fillRect(sx, sy, 1, 1);
+    ctx.fillRect(rx - 8 - i * 5, sy, 1, 1);
+  }
+}
+
+function drawItems() {
+  items.forEach(it => {
+    const px = it.col * CELL, py = it.row * CELL;
+    const cx = px + CELL / 2, cy = py + CELL / 2;
+    const p = .5 + .5 * Math.sin(frameCount / 8 + it.col * .8 + it.row * .5);
+    const yOff = Math.sin(frameCount / 10 + it.col) * 1.2;
+
+    if (it.t === 'supply') {
+      // Мешок с припасами
+      ctx.fillStyle = `rgba(80,160,40,${.08 + .05 * p})`;
+      ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#6A5428';
+      ctx.fillRect(px + 6, py + 8 + yOff, CELL - 12, CELL - 14);
+      ctx.fillStyle = '#4A381A';
+      ctx.fillRect(px + 6, py + 8 + yOff, CELL - 12, 2);
+      ctx.fillRect(px + 6, py + 10 + yOff, 2, CELL - 16);
+      // Верёвка
+      ctx.fillStyle = '#2A1808';
+      ctx.fillRect(px + 10, py + 7 + yOff, CELL - 20, 2);
+      ctx.fillStyle = '#CCE8A0'; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('+' + it.v, cx, py + CELL - 1);
+    } else if (it.t === 'crate') {
+      // Открытый ящик с золотом
+      ctx.fillStyle = `rgba(220,170,30,${.12 + .08 * p})`;
+      ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#6A4A18';
+      ctx.fillRect(px + 3, py + 10 + yOff, CELL - 6, CELL - 14);
+      ctx.fillStyle = '#4A3010';
+      ctx.fillRect(px + 3, py + 10 + yOff, CELL - 6, 2);
+      ctx.fillRect(px + 3, py + CELL - 6 + yOff, CELL - 6, 2);
+      ctx.fillRect(cx - 1, py + 10 + yOff, 2, CELL - 16);
+      // Золото внутри
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(px + 5, py + 8 + yOff, 4, 3);
+      ctx.fillRect(px + 11, py + 7 + yOff, 4, 3);
+      ctx.fillRect(px + 18, py + 9 + yOff, 4, 3);
+      ctx.fillStyle = '#FFAA00';
+      ctx.fillRect(px + 5, py + 10 + yOff, 4, 1);
+      ctx.fillStyle = '#FFEE88'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('+' + it.v, cx, py + CELL);
+    } else if (it.t === 'medkit') {
+      // Сумка с красным крестом
+      ctx.fillStyle = `rgba(230,50,50,${.12 + .06 * p})`;
+      ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#D8D0C0';
+      ctx.fillRect(px + 5, py + 9 + yOff, CELL - 10, CELL - 14);
+      // Ремень сверху
+      ctx.fillStyle = '#6A4A20';
+      ctx.fillRect(px + 8, py + 6 + yOff, 2, 4);
+      ctx.fillRect(px + CELL - 10, py + 6 + yOff, 2, 4);
+      ctx.fillStyle = '#4A3010';
+      ctx.fillRect(px + 5, py + 9 + yOff, CELL - 10, 2);
+      // Красный крест
+      ctx.fillStyle = '#DD1818';
+      ctx.fillRect(cx - 4, cy + yOff, 8, 3);
+      ctx.fillRect(cx - 1, cy - 3 + yOff, 3, 9);
+    } else if (it.t === 'recruit') {
+      // Сидящий боец
+      ctx.fillStyle = `rgba(70,210,110,${.12 + .07 * p})`;
+      ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.fill();
+      // Ноги скрещены
+      ctx.fillStyle = '#2E4218';
+      ctx.fillRect(cx - 5, py + CELL - 8, 10, 4);
+      // Торс
+      ctx.fillStyle = '#4A6A28';
+      ctx.fillRect(cx - 4, py + 12, 8, 8);
+      // Рука машет
+      const wave = Math.floor(frameCount / 10) % 2;
+      ctx.fillStyle = '#C89870';
+      if (wave) ctx.fillRect(cx + 4, py + 8, 2, 5);
+      else ctx.fillRect(cx + 5, py + 6, 2, 5);
+      // Голова
+      ctx.fillStyle = '#C89870';
+      ctx.fillRect(cx - 3, py + 6, 6, 6);
+      ctx.fillStyle = '#3A5418';
+      ctx.fillRect(cx - 4, py + 4, 8, 3);
+      ctx.fillStyle = '#88FF88'; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('рекрут', cx, py + CELL);
+    }
+  });
+}
+
+function drawHazards() {
+  hazards.forEach(h => {
+    const p = 1 - h.timer / h.maxT;
+    const blink = h.timer < 600 && Math.floor(Date.now() / 80) % 2 === 0;
+    const px = h.col * CELL, py = h.row * CELL;
+    ctx.fillStyle = blink ? 'rgba(255,40,0,.2)' : `rgba(255,80,0,${.04 + p * .1})`;
+    ctx.fillRect(px - CELL, py - CELL, CELL * 3, CELL * 3);
+    ctx.strokeStyle = `rgba(255,110,0,${.3 + p * .5})`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(px + CELL / 2, py + CELL / 2, CELL * .7, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(255,150,0,${.55 + p * .45})`;
+    ctx.font = `bold ${7 + p * 3 | 0}px Courier New`; ctx.textAlign = 'center';
+    ctx.fillText('⚠', px + CELL / 2, py - 3);
+    ctx.fillText(Math.ceil(h.timer / 1000) + 'с', px + CELL / 2, py + CELL + 9);
+  });
+}
+
+function drawExplosions() {
+  explosions.forEach(e => {
+    const p = 1 - e.l / e.ml; // 0..1 progress
+    const cx = e.col * CELL + CELL / 2, cy = e.row * CELL + CELL / 2;
+    const frame = Math.floor(p * 4);
+    ctx.globalAlpha = 1 - p * 0.2;
+    // Дым
+    ctx.fillStyle = `rgba(40,20,10,${0.6 - p * 0.3})`;
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2 + p * 2;
+      const d = 8 + p * 22;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(ang) * d, cy + Math.sin(ang) * d, 5 + p * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Ядро
+    if (frame === 0) {
+      ctx.fillStyle = '#FFEE44';
+      ctx.fillRect(cx - 6, cy - 6, 12, 12);
+    } else if (frame === 1) {
+      ctx.fillStyle = '#FF8800';
+      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFCC22';
+      ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
+    } else if (frame === 2) {
+      ctx.fillStyle = '#CC3300';
+      ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FF6600';
+      ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = `rgba(80,40,20,${0.6 - p * 0.4})`;
+      ctx.beginPath(); ctx.arc(cx, cy, 24, 0, Math.PI * 2); ctx.fill();
+    }
+    // Искры
+    if (p < 0.6) {
+      ctx.fillStyle = '#FFDD66';
+      for (let i = 0; i < 8; i++) {
+        const ang = i * Math.PI / 4;
+        const d = 8 + p * 30;
+        ctx.fillRect(cx + Math.cos(ang) * d, cy + Math.sin(ang) * d, 2, 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+function renderSnake(u) {
+  if (!u || !u.alive || u.mode !== 'snake') return;
+  const chain = [{ col: u.col, row: u.row }, ...u.tail];
+  const lvl = u.soldiers;
+  // Проверка можно ли сгруппировать пару (они соседние по прямой)
+  const aligned = (a, b) => (a.col === b.col && Math.abs(a.row - b.row) === 1) ||
+                            (a.row === b.row && Math.abs(a.col - b.col) === 1);
+
+  // Голова — всегда одиночный спрайт
+  drawSoldier(u.col, u.row, true, u.isP, u.hp < 2);
+
+  const tail = u.tail;
+  if (tail.length === 0) return;
+
+  // Караван (10+) — джип на последние 2 сегмента, остальное колонной
+  // Взвод (6-9) — колонной попарно
+  // Отделение (3-5) и Разведка (1-2) — одиночные
+  let i = 0;
+  const useColumn = lvl >= 6;
+  const useJeep = lvl >= 10 && tail.length >= 2;
+
+  // Если джип — берём последние 2 сегмента хвоста под него, если они выровнены
+  let jeepTaken = false;
+  if (useJeep) {
+    const a = tail[tail.length - 2], b = tail[tail.length - 1];
+    if (aligned(a, b)) {
+      drawJeep(a.col, a.row, b.col, b.row, u.isP);
+      jeepTaken = true;
+    }
+  }
+  const endIdx = jeepTaken ? tail.length - 2 : tail.length;
+
+  while (i < endIdx) {
+    if (useColumn && i + 1 < endIdx && aligned(tail[i], tail[i + 1])) {
+      drawColumn(tail[i].col, tail[i].row, tail[i + 1].col, tail[i + 1].row, u.isP);
+      i += 2;
+    } else {
+      drawSoldier(tail[i].col, tail[i].row, false, u.isP, u.hp < 2);
+      i += 1;
+    }
+  }
+}
+
+function drawUnits() {
+  // Враг
+  if (E && E.alive) {
+    if (E.mode === 'snake') renderSnake(E);
+    else drawSoldier(E.col, E.row, true, false);
+  }
+  // Игрок
+  if (P && P.alive) {
+    if (P.mode === 'snake') renderSnake(P);
+    else drawSoldier(P.col, P.row, true, true);
+  }
+  // Шкала рюкзака над головой
+  [P, E].forEach(u => {
+    if (u && u.alive && u.mode === 'snake') {
+      const px = u.col * CELL, py = u.row * CELL;
+      const pct = Math.min(1, u.carry / 120);
+      ctx.fillStyle = 'rgba(0,0,0,.6)';
+      ctx.fillRect(px + 4, py - 5, CELL - 8, 3);
+      if (pct > 0) {
+        ctx.fillStyle = u.isP ? '#88DD44' : '#DD6644';
+        ctx.fillRect(px + 5, py - 4, Math.floor((CELL - 10) * pct), 1);
+      }
+      ctx.strokeStyle = 'rgba(200,200,100,.5)'; ctx.lineWidth = 0.5;
+      ctx.strokeRect(px + 4, py - 5, CELL - 8, 3);
+    }
+  });
+  // Могилы
+  graves.forEach(g => {
+    const a = Math.min(1, g.life / 1500);
+    ctx.globalAlpha = a;
+    const cx = g.col * CELL + CELL / 2, cy = g.row * CELL + CELL / 2;
+    ctx.fillStyle = '#3A2A18';
+    ctx.fillRect(cx - 1, cy - 6, 2, 12);
+    ctx.fillRect(cx - 5, cy - 2, 10, 2);
+    ctx.fillStyle = '#1A1208';
+    ctx.fillRect(cx - 1, cy - 6, 2, 1);
+    ctx.globalAlpha = 1;
+  });
+  // Респавн таймер
+  [P, E].forEach(u => {
+    if (u && !u.alive) {
+      ctx.fillStyle = 'rgba(200,50,30,.55)'; ctx.font = '8px Courier New'; ctx.textAlign = 'center';
+      ctx.fillText('☠ ' + (u.respT / 1000).toFixed(1) + 's', u.col * CELL + CELL / 2, u.row * CELL - 6);
+    }
+  });
+}
+
+function drawSoldier(col, row, isHead, isP, damaged) {
+  const px = col * CELL, py = row * CELL, cx = px + CELL / 2;
+  const bob = Math.floor(frameCount / 12) % 2; // 2-frame idle
+  const bodyCol = isP ? '#4A6A28' : '#5A2828';
+  const bodyDk  = isP ? '#2E4218' : '#3A1818';
+  const skin    = '#C89870';
+  const gear    = isP ? '#2C3814' : '#3A1010';
+
+  // Тень
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.ellipse(cx, py + CELL - 2, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Ноги (2 кадра)
+  ctx.fillStyle = bodyDk;
+  if (bob === 0) {
+    ctx.fillRect(cx - 5, py + CELL - 8, 3, 6);
+    ctx.fillRect(cx + 2, py + CELL - 8, 3, 6);
+  } else {
+    ctx.fillRect(cx - 5, py + CELL - 7, 3, 5);
+    ctx.fillRect(cx + 2, py + CELL - 7, 3, 5);
+  }
+  // Ботинки
+  ctx.fillStyle = '#1A1208';
+  ctx.fillRect(cx - 5, py + CELL - 3, 3, 2);
+  ctx.fillRect(cx + 2, py + CELL - 3, 3, 2);
+
+  // Торс (куртка)
+  ctx.fillStyle = bodyCol;
+  ctx.fillRect(cx - 6, py + 12, 12, 10);
+  ctx.fillStyle = bodyDk;
+  ctx.fillRect(cx - 6, py + 12, 12, 2);
+  // Ремень
+  ctx.fillStyle = '#1A1208';
+  ctx.fillRect(cx - 6, py + 19, 12, 1);
+  // Подсумки
+  ctx.fillStyle = gear;
+  ctx.fillRect(cx - 5, py + 15, 2, 3);
+  ctx.fillRect(cx + 3, py + 15, 2, 3);
+
+  // Руки
+  ctx.fillStyle = bodyCol;
+  ctx.fillRect(cx - 7, py + 13, 2, 6);
+  ctx.fillRect(cx + 5, py + 13, 2, 6);
+
+  // Голова
+  ctx.fillStyle = skin;
+  ctx.fillRect(cx - 4, py + 5, 8, 7);
+  // Шлем/кепка
+  if (isP) {
+    ctx.fillStyle = '#3A5418';
+    ctx.fillRect(cx - 5, py + 3, 10, 4);
+    ctx.fillStyle = '#5A7828';
+    ctx.fillRect(cx - 5, py + 3, 10, 1);
+    // Козырёк
+    ctx.fillStyle = '#2A3810';
+    ctx.fillRect(cx - 6, py + 6, 12, 1);
+  } else {
+    // Каска врага
+    ctx.fillStyle = '#2A1010';
+    ctx.fillRect(cx - 5, py + 3, 10, 4);
+    ctx.fillStyle = '#481818';
+    ctx.fillRect(cx - 5, py + 3, 10, 1);
+    ctx.fillRect(cx - 6, py + 6, 12, 1);
+  }
+  // Глаза
+  ctx.fillStyle = '#000';
+  ctx.fillRect(cx - 3, py + 8, 1, 1);
+  ctx.fillRect(cx + 2, py + 8, 1, 1);
+
+  // Оружие (только у головы)
+  if (isHead) {
+    ctx.fillStyle = '#1A1208';
+    ctx.fillRect(cx + 6, py + 11, 2, 9);
+    ctx.fillStyle = '#3A2818';
+    ctx.fillRect(cx + 5, py + 18, 3, 2);
+  }
+
+  // Рюкзак
+  ctx.fillStyle = bodyDk;
+  ctx.fillRect(cx - 4, py + 14, 8, 4);
+
+  // Ранен — красная штриховка и повязка
+  if (damaged) {
+    ctx.fillStyle = '#EEDDCC';
+    ctx.fillRect(cx - 5, py + 5, 10, 2); // бинт на голове
+    ctx.fillStyle = 'rgba(200,30,20,.35)';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(px + 2 + i * 7, py + 10 + (i % 2) * 6, 2, 2);
+    }
+  }
+
+  // Рамка выделения для головы
+  if (isHead) {
+    ctx.strokeStyle = isP ? 'rgba(255,220,80,.65)' : 'rgba(255,80,60,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 1, py + 1, CELL - 2, CELL - 2);
+  }
+}
+
+// Спрайт "колонны" (2 сегмента подряд) — взвод 6-10
+function drawColumn(c1, r1, c2, r2, isP) {
+  const x1 = c1 * CELL + CELL / 2, y1 = r1 * CELL + CELL / 2;
+  const x2 = c2 * CELL + CELL / 2, y2 = r2 * CELL + CELL / 2;
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const horiz = r1 === r2;
+  const bodyCol = isP ? '#3E5A1C' : '#4A1E1E';
+  const bodyDk  = isP ? '#25360E' : '#2A1010';
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  if (horiz) ctx.fillRect(Math.min(x1, x2) - 12, my + 10, 24 + Math.abs(x2 - x1), 3);
+  else ctx.fillRect(mx + 10, Math.min(y1, y2) - 12, 3, 24 + Math.abs(y2 - y1));
+
+  ctx.fillStyle = bodyCol;
+  if (horiz) ctx.fillRect(Math.min(x1, x2) - 10, my - 8, 20 + Math.abs(x2 - x1), 16);
+  else ctx.fillRect(mx - 8, Math.min(y1, y2) - 10, 16, 20 + Math.abs(y2 - y1));
+
+  ctx.fillStyle = bodyDk;
+  if (horiz) {
+    ctx.fillRect(Math.min(x1, x2) - 10, my - 8, 20 + Math.abs(x2 - x1), 2);
+    // 2 головы
+    ctx.fillStyle = '#C89870'; ctx.fillRect(x1 - 3, my - 4, 6, 5); ctx.fillRect(x2 - 3, my - 4, 6, 5);
+    ctx.fillStyle = isP ? '#3A5418' : '#2A1010';
+    ctx.fillRect(x1 - 4, my - 6, 8, 3); ctx.fillRect(x2 - 4, my - 6, 8, 3);
+  } else {
+    ctx.fillRect(mx - 8, Math.min(y1, y2) - 10, 16, 2);
+    ctx.fillStyle = '#C89870'; ctx.fillRect(mx - 3, y1 - 3, 6, 5); ctx.fillRect(mx - 3, y2 - 3, 6, 5);
+    ctx.fillStyle = isP ? '#3A5418' : '#2A1010';
+    ctx.fillRect(mx - 4, y1 - 5, 8, 3); ctx.fillRect(mx - 4, y2 - 5, 8, 3);
+  }
+}
+
+// Джип сзади каравана (2 сегмента) — 10+
+function drawJeep(c1, r1, c2, r2, isP) {
+  const x1 = c1 * CELL + CELL / 2, y1 = r1 * CELL + CELL / 2;
+  const x2 = c2 * CELL + CELL / 2, y2 = r2 * CELL + CELL / 2;
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const horiz = r1 === r2;
+  const body = isP ? '#4A5820' : '#482020';
+  const dark = isP ? '#2A3212' : '#2A1010';
+
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  if (horiz) ctx.fillRect(Math.min(x1, x2) - 14, my + 11, 28 + Math.abs(x2 - x1), 3);
+  else ctx.fillRect(mx + 11, Math.min(y1, y2) - 14, 3, 28 + Math.abs(y2 - y1));
+
+  ctx.fillStyle = body;
+  if (horiz) {
+    ctx.fillRect(Math.min(x1, x2) - 12, my - 9, 24 + Math.abs(x2 - x1), 18);
+    ctx.fillStyle = dark;
+    ctx.fillRect(Math.min(x1, x2) - 12, my - 9, 24 + Math.abs(x2 - x1), 2);
+    ctx.fillRect(Math.min(x1, x2) - 12, my + 7, 24 + Math.abs(x2 - x1), 2);
+    // Колёса
+    ctx.fillStyle = '#0A0606';
+    ctx.fillRect(x1 - 4, my + 8, 4, 3); ctx.fillRect(x1 + 2, my + 8, 4, 3);
+    ctx.fillRect(x2 - 4, my + 8, 4, 3); ctx.fillRect(x2 + 2, my + 8, 4, 3);
+    // Пулемёт сзади
+    ctx.fillStyle = '#1A1208';
+    const gunX = (c1 < c2) ? x1 : x2;
+    ctx.fillRect(gunX - 1, my - 13, 2, 5);
+    ctx.fillRect(gunX - 3, my - 14, 6, 2);
+  } else {
+    ctx.fillRect(mx - 9, Math.min(y1, y2) - 12, 18, 24 + Math.abs(y2 - y1));
+    ctx.fillStyle = dark;
+    ctx.fillRect(mx - 9, Math.min(y1, y2) - 12, 2, 24 + Math.abs(y2 - y1));
+    ctx.fillRect(mx + 7, Math.min(y1, y2) - 12, 2, 24 + Math.abs(y2 - y1));
+    ctx.fillStyle = '#0A0606';
+    ctx.fillRect(mx + 8, y1 - 4, 3, 4); ctx.fillRect(mx + 8, y1 + 2, 3, 4);
+    ctx.fillRect(mx + 8, y2 - 4, 3, 4); ctx.fillRect(mx + 8, y2 + 2, 3, 4);
+    ctx.fillStyle = '#1A1208';
+    const gunY = (r1 < r2) ? y1 : y2;
+    ctx.fillRect(mx - 13, gunY - 1, 5, 2);
+  }
+}
+
+function drawFX() {
+  fx = fx.filter(f => { f.life -= 16; return f.life > 0; });
+  fx.forEach(f => {
+    const a = f.life / f.ml; ctx.globalAlpha = a;
+    ctx.fillStyle = f.col; ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText(f.txt, f.x, f.y - (1 - a) * 20); ctx.globalAlpha = 1;
+  });
+}
+
+function drawHUD() {
+  if (!P || !P.alive || P.mode !== 'snake') return;
+  const fxPx = BASE_C * CELL;
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(fxPx + 3, 3, 220, 20);
+  ctx.fillStyle = P.carry > 0 ? '#FFD700' : '#3A5A28';
+  ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'left';
+  ctx.fillText(P.carry > 0 ? `📦 ${P.carry} — вернись на базу!` : '📦 рюкзак пуст', fxPx + 8, 16);
+}
+
+function hline(x1, x2, y, col) {
+  ctx.strokeStyle = col; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+}
+function drawWallStrip(wx, wy, ww, wh, c1, c2, cB) {
+  ctx.fillStyle = c1; ctx.fillRect(wx, wy, ww, wh);
+  for (let r = 0; r < ROWS; r++) {
+    if (DOOR.includes(r)) continue;
+    const off = r % 2 === 0 ? 0 : Math.floor(ww * .5);
+    ctx.fillStyle = r % 2 === 0 ? c2 : c1;
+    ctx.fillRect(wx + off, r * CELL + 1, ww - 1, CELL - 2);
+    ctx.strokeStyle = cB; ctx.lineWidth = .5;
+    ctx.strokeRect(wx + off, r * CELL + 1, ww - 1, CELL - 2);
+  }
+}
+
+function update(dt) {
+  if (!P || !E) return;
+  graves = graves.filter(g => { g.life -= dt; return g.life > 0; });
+  itemT -= dt; if (itemT <= 0 && items.length < 14) { spawnItem(); itemT = ri(1800, 3200); }
+  hazT -= dt; if (hazT <= 0) { spawnHaz(); hazT = ri(10000, 16000); }
+  updateHaz(dt);
+  handleBaseKeys();
+  moveUnit(P, dt);
+  moveUnit(E, dt);
+  updateAI(dt);
+  checkColl();
+}
+
+function loop(ts = 0) {
+  if (crashed) return;
+  try {
+    const dt = last < 0 ? 0 : Math.min(ts - last, 80); last = ts;
+    if (running) update(dt);
+    render();
+  } catch (err) {
+    crashed = true;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = '#FF4444'; ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText('ERROR: ' + err.message, 20, 40);
+    ctx.fillStyle = '#FFAA44'; ctx.font = '10px Courier New';
+    const stack = (err.stack || '').split('\n').slice(0, 10);
+    stack.forEach((line, i) => ctx.fillText(line.substring(0, 80), 20, 70 + i * 14));
+    return;
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
