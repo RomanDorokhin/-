@@ -1,0 +1,8 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020804;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace}
+canvas{display:block;box-shadow:0 0 60px rgba(30,100,15,.18)}
+#ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,4,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10}
+.ot{font-size:34px;color:#C8A000;letter-spacing:4px;font-weight:bold;text-align:center}
+.os{font-size:11px;color:#3a6020;line-height:2.3;text-align:center;max-width:420px}
+.ob{border:1px solid #4a8a30;background:#0a140a;color:#7ab060;font-size:12px;padding:10px 30px;cursor:pointer;letter-spacing:2px}
+.ob:hover{background:#122010}
