@@ -1,4 +1,4 @@
-// === УПРАВЛЕНИЕ ===
+// === УПРАВЛЕНИЕ v5 ===
 
 const keys = {};
 
@@ -6,8 +6,9 @@ function setupInput() {
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-    if (!P || !P.alive) return;
-    if (P.mode === 'snake') {
+    if (e.code === 'KeyR') { startGame(); return; }
+
+    if (state === S.ECONOMY && P && P.alive && P.mode === 'snake') {
       const M = {
         ArrowUp: { dc: 0, dr: -1 }, KeyW: { dc: 0, dr: -1 },
         ArrowDown: { dc: 0, dr: 1 }, KeyS: { dc: 0, dr: 1 },
@@ -20,7 +21,6 @@ function setupInput() {
           P.nxt = d;
       }
     }
-    if (e.code === 'KeyR') startGame();
   });
 
   document.addEventListener('keyup', e => keys[e.code] = false);
@@ -30,24 +30,10 @@ function setupInput() {
     const mx = (e.clientX - r.left) / r.width * CW;
     const my = (e.clientY - r.top) / r.height * CH;
 
-    // В бою — клик запускает ракету если идёт таргетинг
-    if (state === S.BATTLE) {
-      handleBattleClick(mx, my);
-      return;
-    }
+    if (state === S.PLACEMENT) { handlePlacementClick(mx, my); return; }
+    if (state === S.NAVAL)     { handleNavalClick(mx, my); return; }
 
-    // В экономике — кнопка "В БОЙ!" после 20 сек
-    if (state === S.ECONOMY) {
-      const elapsed = ECON_DURATION - econTimer;
-      if (elapsed > 20000) {
-        const bx = CW / 2 - 70, by = CH - 36, bw = 140, bh = 26;
-        if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
-          econTimer = 0; // форсируем завершение фазы экономики
-          return;
-        }
-      }
-    }
-
+    if (state !== S.ECONOMY) return;
     if (!P || !P.alive || P.mode !== 'snake') return;
     const hx = P.col * CELL + CELL / 2, hy = P.row * CELL + CELL / 2;
     const dx = mx - hx, dy = my - hy;

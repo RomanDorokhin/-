@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>МОБИЛИЗАЦИЯ</title>
+<title>МОБИЛИЗАЦИЯ v5</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,23 +11,22 @@
 <div id="ov">
   <div class="ot">МОБИЛИЗАЦИЯ</div>
   <div class="os">
-    🏠 Левая база — твоя &nbsp;·&nbsp; Правая — противник<br>
-    🟢 Зайди в зелёный проход → включится змейка<br>
-    📦 Собирай ресурсы 60 секунд · 🪖 Подбирай бойцов<br>
-    ⚔ Когда таймер кончится — начнётся БОЙ армиями<br>
-    🏆 Уничтожь базу врага = победа · защити свою
+    ФАЗА 1 · СБОР (60 сек): бегай змейкой, хватай ресурсы и рекрутов<br>
+    ☢ С 20-й секунды начнут прилетать ядерные ракеты — берегись<br>
+    ФАЗА 2 · РАССТАНОВКА: поставь бойцов на свою сетку 10×10<br>
+    ФАЗА 3 · МОРСКОЙ БОЙ: стреляй по клеткам врага, найди всех
   </div>
   <button class="ob" onclick="startGame()">▶ НАЧАТЬ</button>
 </div>
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
-<script src="js/progression.js"></script>
 <script src="js/spawn.js"></script>
 <script src="js/movement.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/hazards.js"></script>
-<script src="js/battle.js"></script>
-<script src="js/rockets.js"></script>
+<script src="js/nuke.js"></script>
+<script src="js/placement.js"></script>
+<script src="js/naval.js"></script>
 <script src="js/input.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>

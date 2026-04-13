@@ -1,4 +1,4 @@
-// === ГЛАВНЫЙ ЦИКЛ И STATE MACHINE ===
+// === ГЛАВНЫЙ ЦИКЛ И STATE MACHINE v5 ===
 
 function startGame() {
   try {
@@ -6,14 +6,15 @@ function startGame() {
     P = mkUnit(true);
     E = mkUnit(false);
     items = []; hazards = []; explosions = []; fx = []; graves = [];
-    playerArmy = []; enemyArmy = [];
     itemT = 0; hazT = 8000; aiT = 0;
     roundNum = 1;
+    bankedSoldiers = 0;
+    winner = null;
     state = S.ECONOMY;
     econTimer = ECON_DURATION;
     stateTimer = 0;
-    playerBaseHP = BASE_HP_MAX;
-    enemyBaseHP = BASE_HP_MAX;
+    resetNukes();
+    scheduleNukes();
     for (let i = 0; i < 18; i++) spawnItem();
     spawnHaz(); spawnHaz();
     running = true;
@@ -23,6 +24,30 @@ function startGame() {
   }
 }
 
+function startNextRound() {
+  roundNum++;
+  // P.res и P.soldiers уже обнулены в initPlacement — они превратились в армию
+  // bankedSoldiers сохраняется (перенос излишка)
+  items = []; hazards = []; explosions = []; fx = [];
+  for (let i = 0; i < 18; i++) spawnItem();
+  spawnHaz(); spawnHaz();
+  if (P) {
+    P.col = 2; P.row = ROWS >> 1; P.mode = 'base';
+    P.tail = []; P.carry = 0; P.alive = true; P.hp = 2;
+    P.vdc = 0; P.vdr = 0; P.snT = 0; P.mvT = 0;
+  }
+  if (E) {
+    E.col = TC - 3; E.row = ROWS >> 1; E.mode = 'base';
+    E.tail = []; E.carry = 0; E.alive = true; E.hp = 2;
+    E.vdc = 0; E.vdr = 0; E.snT = 0; E.mvT = 0;
+  }
+  resetNukes();
+  scheduleNukes();
+  state = S.ECONOMY;
+  econTimer = ECON_DURATION;
+  winner = null;
+}
+
 // === ОБНОВЛЕНИЕ ПО СОСТОЯНИЯМ ===
 
 function updateEconomy(dt) {
@@ -30,6 +55,7 @@ function updateEconomy(dt) {
   itemT -= dt; if (itemT <= 0 && items.length < 14) { spawnItem(); itemT = ri(1800, 3200); }
   hazT -= dt; if (hazT <= 0) { spawnHaz(); hazT = ri(10000, 16000); }
   updateHaz(dt);
+  updateNukes(dt);
   handleBaseKeys();
   moveUnit(P, dt);
   moveUnit(E, dt);
@@ -38,78 +64,30 @@ function updateEconomy(dt) {
 
   econTimer -= dt;
   if (econTimer <= 0) {
-    state = S.LOCK;
-    stateTimer = 1500;
-    addFx(CW / 2, CH / 2 - 20, '⏱ ВРЕМЯ ВЫШЛО', '#FFD700', 2000);
-    lockEconomy();
-  }
-}
-
-function updateLock(dt) {
-  stateTimer -= dt;
-  if (stateTimer <= 0) {
-    state = S.BATTLE_INIT;
-    stateTimer = 1200;
-    buildArmies();
-    addFx(CW / 2, CH / 2, '⚔ БОЙ ⚔', '#FF6644', 1800);
-  }
-}
-
-function updateBattleInit(dt) {
-  stateTimer -= dt;
-  if (stateTimer <= 0) {
-    state = S.BATTLE;
-  }
-}
-
-function updateBattle(dt) {
-  updateInfantry(dt);
-  updateBaseExchange(dt);
-  updateRockets(dt);
-  // обновление взрывов
-  explosions = explosions.filter(e => { e.l -= dt; return e.l > 0; });
-
-  if (checkVictory()) {
-    state = S.RESOLVE;
-    stateTimer = 2500;
-    if (winner === 'player') addFx(CW / 2, CH / 2, '🏆 ПОБЕДА', '#FFD700', 2400);
-    else addFx(CW / 2, CH / 2, '☠ ПОРАЖЕНИЕ', '#FF3333', 2400);
-  }
-}
-
-function updateResolve(dt) {
-  stateTimer -= dt;
-  explosions = explosions.filter(e => { e.l -= dt; return e.l > 0; });
-  if (stateTimer <= 0) {
-    state = S.ROUND_END;
-    stateTimer = 2000;
-  }
-}
-
-function updateRoundEnd(dt) {
-  stateTimer -= dt;
-  if (stateTimer <= 0) {
-    if (winner === 'enemy') {
-      // Полное поражение → перезапуск с раунда 1
-      startGame();
-    } else {
-      startNextRound();
-      applyDifficultyScaling();
-    }
+    // Если в поле с рюкзаком — засчитываем его (иначе всё сгорит)
+    if (P && P.mode === 'snake' && P.carry > 0) { P.res += P.carry; P.carry = 0; }
+    if (E && E.mode === 'snake' && E.carry > 0) { E.res += E.carry; E.carry = 0; }
+    initPlacement();
+    state = S.PLACEMENT;
+    addFx(CW / 2, 50, '▶ РАССТАНОВКА', '#FFD700', 1800);
   }
 }
 
 function update(dt) {
   if (!P || !E) return;
-  // Курсор-крестик когда ждём выстрел
-  if (canvas) canvas.style.cursor = rocketTargeting ? 'crosshair' : 'default';
+  explosions = explosions.filter(e => { e.l -= dt; return e.l > 0; });
+
   switch (state) {
-    case S.ECONOMY:     updateEconomy(dt); break;
-    case S.LOCK:        updateLock(dt); break;
-    case S.BATTLE_INIT: updateBattleInit(dt); break;
-    case S.BATTLE:      updateBattle(dt); break;
-    case S.RESOLVE:     updateResolve(dt); break;
-    case S.ROUND_END:   updateRoundEnd(dt); break;
+    case S.ECONOMY:   updateEconomy(dt); break;
+    case S.PLACEMENT: updatePlacement(dt); break;
+    case S.NAVAL:     updateNaval(dt); break;
+    case S.ROUND_END:
+      stateTimer -= dt;
+      if (stateTimer <= 0) {
+        if (winner === 'enemy') startGame();
+        else startNextRound();
+      }
+      break;
   }
 }
 
