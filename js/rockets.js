@@ -9,7 +9,7 @@ let ROCKET_DAMAGE = 50;
 const ROCKET_RADIUS = 3;
 
 function resetRockets() {
-  rocketTimer = 0;
+  rocketTimer = rocketCooldown; // первая ракета готова сразу
   currentTurn = 'player';
   rocketTargeting = false;
   activeRockets = [];

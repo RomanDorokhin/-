@@ -36,6 +36,18 @@ function setupInput() {
       return;
     }
 
+    // В экономике — кнопка "В БОЙ!" после 20 сек
+    if (state === S.ECONOMY) {
+      const elapsed = ECON_DURATION - econTimer;
+      if (elapsed > 20000) {
+        const bx = CW / 2 - 70, by = CH - 36, bw = 140, bh = 26;
+        if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
+          econTimer = 0; // форсируем завершение фазы экономики
+          return;
+        }
+      }
+    }
+
     if (!P || !P.alive || P.mode !== 'snake') return;
     const hx = P.col * CELL + CELL / 2, hy = P.row * CELL + CELL / 2;
     const dx = mx - hx, dy = my - hy;

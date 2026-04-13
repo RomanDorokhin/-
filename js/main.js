@@ -101,6 +101,8 @@ function updateRoundEnd(dt) {
 
 function update(dt) {
   if (!P || !E) return;
+  // Курсор-крестик когда ждём выстрел
+  if (canvas) canvas.style.cursor = rocketTargeting ? 'crosshair' : 'default';
   switch (state) {
     case S.ECONOMY:     updateEconomy(dt); break;
     case S.LOCK:        updateLock(dt); break;

@@ -263,14 +263,22 @@ function drawRockets() {
 // Прицел для ракеты игрока
 function drawRocketTargeting() {
   if (!rocketTargeting) return;
-  // Мигающая рамка вокруг поля
-  const pulse = 0.5 + 0.5 * Math.sin(frameCount / 4);
-  ctx.strokeStyle = `rgba(255,200,0,${0.4 + 0.4 * pulse})`;
-  ctx.lineWidth = 3;
+  // Затемнение всего боя
+  ctx.fillStyle = 'rgba(255,170,0,0.08)';
+  ctx.fillRect(BASE_C * CELL, 0, FIELD_C * CELL, CH);
+  // Мигающая толстая рамка вокруг поля
+  const pulse = 0.5 + 0.5 * Math.sin(frameCount / 3);
+  ctx.strokeStyle = `rgba(255,200,0,${0.6 + 0.4 * pulse})`;
+  ctx.lineWidth = 4;
   ctx.strokeRect(BASE_C * CELL + 2, 2, FIELD_C * CELL - 4, CH - 4);
-  // Текст
-  ctx.fillStyle = '#FFAA00'; ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
-  ctx.fillText('🎯 КЛИКНИ ПО ЦЕЛИ', CW / 2, CH - 10);
+  // Центральная надпись крупно
+  ctx.fillStyle = 'rgba(0,0,0,.75)';
+  ctx.fillRect(BASE_C * CELL + 20, CH / 2 - 30, FIELD_C * CELL - 40, 60);
+  ctx.fillStyle = `rgba(255,200,0,${0.8 + 0.2 * pulse})`;
+  ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('🎯 КЛИКНИ ПО ЦЕЛИ', CW / 2, CH / 2);
+  ctx.fillStyle = '#FFDD88'; ctx.font = '10px Courier New';
+  ctx.fillText('радиус взрыва — 3 клетки', CW / 2, CH / 2 + 18);
 }
 
 // Отрисовка боевых юнитов
@@ -303,28 +311,32 @@ function drawBattleUnit(u) {
 
 // HUD боя
 function drawBattleHUD() {
-  // Счётчики армий вверху
-  ctx.fillStyle = 'rgba(0,0,0,.55)';
-  ctx.fillRect(BASE_C * CELL + 5, 30, FIELD_C * CELL - 10, 16);
-  ctx.fillStyle = '#88DD44'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'left';
-  ctx.fillText('🟢 ' + playerArmy.length, BASE_C * CELL + 12, 42);
-  ctx.fillStyle = '#DD4444'; ctx.textAlign = 'right';
-  ctx.fillText(enemyArmy.length + ' 🔴', (BASE_C + FIELD_C) * CELL - 12, 42);
-
-  // Кулдаун ракеты — снизу поля
-  const fy = CH - 24;
+  // Счётчики армий + кулдаун ракеты — вверху
   const fpx = BASE_C * CELL + 5;
   const fw = FIELD_C * CELL - 10;
-  ctx.fillStyle = 'rgba(0,0,0,.55)';
-  ctx.fillRect(fpx, fy, fw, 14);
+  const hy = 32;
+
+  ctx.fillStyle = 'rgba(0,0,0,.7)';
+  ctx.fillRect(fpx, hy, fw, 28);
+
+  // Счётчики армий
+  ctx.fillStyle = '#88DD44'; ctx.font = 'bold 11px Courier New'; ctx.textAlign = 'left';
+  ctx.fillText('🟢 ' + playerArmy.length, fpx + 8, hy + 12);
+  ctx.fillStyle = '#DD4444'; ctx.textAlign = 'right';
+  ctx.fillText(enemyArmy.length + ' 🔴', fpx + fw - 8, hy + 12);
+
+  // Шкала кулдауна ракеты
   const pct = rocketTargeting ? 1 : Math.min(1, rocketTimer / rocketCooldown);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(fpx + 4, hy + 16, fw - 8, 8);
   ctx.fillStyle = rocketTargeting ? '#FFAA00' : (currentTurn === 'player' ? '#88DD44' : '#DD4444');
-  ctx.fillRect(fpx + 1, fy + 1, (fw - 2) * pct, 12);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'center';
-  const label = rocketTargeting ? '🎯 ТВОЙ ВЫСТРЕЛ!' :
-    (currentTurn === 'player' ? 'ТВОЯ РАКЕТА' : 'РАКЕТА ВРАГА') +
-    ' ' + Math.ceil((rocketCooldown - rocketTimer) / 1000) + 'с';
-  ctx.fillText(label, fpx + fw / 2, fy + 10);
+  ctx.fillRect(fpx + 5, hy + 17, (fw - 10) * pct, 6);
+
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Courier New'; ctx.textAlign = 'center';
+  const label = rocketTargeting ? '🎯 ТВОЙ ВЫСТРЕЛ — КЛИКНИ ПО ПОЛЮ' :
+    (currentTurn === 'player' ? 'РАКЕТА: ТВОЙ ХОД' : 'РАКЕТА: ВРАГ') +
+    ' · ' + Math.ceil((rocketCooldown - rocketTimer) / 1000) + 'с';
+  ctx.fillText(label, fpx + fw / 2, hy + 23);
 }
 
 function drawFX() {
@@ -348,12 +360,26 @@ function drawVignette() {
 
 function drawHUD() {
   if (state !== S.ECONOMY) return;
+
+  // Кнопка "В БОЙ!" появляется после 20 секунд
+  const elapsed = ECON_DURATION - econTimer;
+  if (elapsed > 20000) {
+    const bx = CW / 2 - 70, by = CH - 36, bw = 140, bh = 26;
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount / 6);
+    ctx.fillStyle = `rgba(180,40,20,${0.75 + 0.15 * pulse})`;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#FFAA00'; ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#FFEE88'; ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('⚔ В БОЙ! ⚔', CW / 2, by + 17);
+  }
+
   if (!P || !P.alive || P.mode !== 'snake') return;
   const fxPx = BASE_C * CELL;
-  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(fxPx + 3, 50, 220, 18);
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(fxPx + 3, 62, 220, 18);
   ctx.fillStyle = P.carry > 0 ? '#FFD700' : '#3A5A28';
   ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'left';
-  ctx.fillText(P.carry > 0 ? `📦 ${P.carry} — вернись на базу!` : '📦 рюкзак пуст', fxPx + 8, 62);
+  ctx.fillText(P.carry > 0 ? `📦 ${P.carry} — вернись на базу!` : '📦 рюкзак пуст', fxPx + 8, 74);
 }
 
 // Большой оверлей фазы (LOCK / BATTLE_INIT / RESOLVE / ROUND_END)

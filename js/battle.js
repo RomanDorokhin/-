@@ -115,8 +115,8 @@ function updateBaseExchange(dt) {
   if (baseTimer < 2000) return;
   baseTimer = 0;
 
-  playerBaseHP -= enemyArmy.length * 2;
-  enemyBaseHP -= playerArmy.length * 2;
+  playerBaseHP -= enemyArmy.length * 20;
+  enemyBaseHP -= playerArmy.length * 20;
 
   if (playerBaseHP < 0) playerBaseHP = 0;
   if (enemyBaseHP < 0) enemyBaseHP = 0;
