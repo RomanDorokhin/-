@@ -19,6 +19,8 @@ function render() {
 
   if (state === S.BATTLE_INIT || state === S.BATTLE || state === S.RESOLVE || state === S.ROUND_END) {
     drawArmies();
+    drawRockets();
+    drawRocketTargeting();
     drawBattleHUD();
   }
 
@@ -237,6 +239,40 @@ function drawUnits() {
   });
 }
 
+// Отрисовка летящих ракет
+function drawRockets() {
+  activeRockets.forEach(r => {
+    const fx = r.fromCol * CELL + CELL / 2;
+    const fy = r.fromRow * CELL + CELL / 2;
+    const tx = r.toCol * CELL + CELL / 2;
+    const ty = r.toRow * CELL + CELL / 2;
+    const x = fx + (tx - fx) * r.progress;
+    const y = fy + (ty - fy) * r.progress - Math.sin(r.progress * Math.PI) * 60;
+    // след
+    ctx.strokeStyle = r.isP ? 'rgba(150,255,150,.5)' : 'rgba(255,100,80,.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(x, y); ctx.stroke();
+    // сама ракета
+    ctx.fillStyle = r.isP ? '#AAFF88' : '#FF8866';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFEE44';
+    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+// Прицел для ракеты игрока
+function drawRocketTargeting() {
+  if (!rocketTargeting) return;
+  // Мигающая рамка вокруг поля
+  const pulse = 0.5 + 0.5 * Math.sin(frameCount / 4);
+  ctx.strokeStyle = `rgba(255,200,0,${0.4 + 0.4 * pulse})`;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(BASE_C * CELL + 2, 2, FIELD_C * CELL - 4, CH - 4);
+  // Текст
+  ctx.fillStyle = '#FFAA00'; ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center';
+  ctx.fillText('🎯 КЛИКНИ ПО ЦЕЛИ', CW / 2, CH - 10);
+}
+
 // Отрисовка боевых юнитов
 function drawArmies() {
   playerArmy.forEach(u => drawBattleUnit(u));
@@ -274,6 +310,21 @@ function drawBattleHUD() {
   ctx.fillText('🟢 ' + playerArmy.length, BASE_C * CELL + 12, 42);
   ctx.fillStyle = '#DD4444'; ctx.textAlign = 'right';
   ctx.fillText(enemyArmy.length + ' 🔴', (BASE_C + FIELD_C) * CELL - 12, 42);
+
+  // Кулдаун ракеты — снизу поля
+  const fy = CH - 24;
+  const fpx = BASE_C * CELL + 5;
+  const fw = FIELD_C * CELL - 10;
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.fillRect(fpx, fy, fw, 14);
+  const pct = rocketTargeting ? 1 : Math.min(1, rocketTimer / rocketCooldown);
+  ctx.fillStyle = rocketTargeting ? '#FFAA00' : (currentTurn === 'player' ? '#88DD44' : '#DD4444');
+  ctx.fillRect(fpx + 1, fy + 1, (fw - 2) * pct, 12);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Courier New'; ctx.textAlign = 'center';
+  const label = rocketTargeting ? '🎯 ТВОЙ ВЫСТРЕЛ!' :
+    (currentTurn === 'player' ? 'ТВОЯ РАКЕТА' : 'РАКЕТА ВРАГА') +
+    ' ' + Math.ceil((rocketCooldown - rocketTimer) / 1000) + 'с';
+  ctx.fillText(label, fpx + fw / 2, fy + 10);
 }
 
 function drawFX() {

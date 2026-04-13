@@ -26,10 +26,17 @@ function setupInput() {
   document.addEventListener('keyup', e => keys[e.code] = false);
 
   canvas.addEventListener('click', e => {
-    if (!P || !P.alive || P.mode !== 'snake') return;
     const r = canvas.getBoundingClientRect();
     const mx = (e.clientX - r.left) / r.width * CW;
     const my = (e.clientY - r.top) / r.height * CH;
+
+    // В бою — клик запускает ракету если идёт таргетинг
+    if (state === S.BATTLE) {
+      handleBattleClick(mx, my);
+      return;
+    }
+
+    if (!P || !P.alive || P.mode !== 'snake') return;
     const hx = P.col * CELL + CELL / 2, hy = P.row * CELL + CELL / 2;
     const dx = mx - hx, dy = my - hy;
     let nd = Math.abs(dx) > Math.abs(dy) ? { dc: dx > 0 ? 1 : -1, dr: 0 } : { dc: 0, dr: dy > 0 ? 1 : -1 };

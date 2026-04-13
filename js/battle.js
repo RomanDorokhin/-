@@ -21,12 +21,16 @@ function buildArmies() {
     if (row < ROWS - 2) playerArmy.push(mkBattleUnit(col, row, true, 1));
   }
 
-  // Враг: масштабируется от номера раунда + от того что собрал
-  const eCount = Math.max(1, E.soldiers + Math.floor(E.res / 30) + roundNum);
+  // Враг: масштабируется от номера раунда + от того что собрал + enemyCountBonus
+  const eCount = Math.max(1, E.soldiers + Math.floor(E.res / 30) + roundNum + enemyCountBonus);
   for (let i = 0; i < eCount; i++) {
     const col = BASE_C + FIELD_C - 3 - (i % 3);
     const row = 4 + Math.floor(i / 3);
-    if (row < ROWS - 2) enemyArmy.push(mkBattleUnit(col, row, false, 1));
+    if (row < ROWS - 2) {
+      const u = mkBattleUnit(col, row, false, 1);
+      u.power = Math.round(u.power * enemyUnitPowerMult);
+      enemyArmy.push(u);
+    }
   }
 
   playerBaseHP = BASE_HP_MAX;
@@ -34,6 +38,7 @@ function buildArmies() {
   infantryTimer = 0;
   baseTimer = 0;
   winner = null;
+  resetRockets();
 }
 
 // Дистанция между двумя юнитами

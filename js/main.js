@@ -65,6 +65,7 @@ function updateBattleInit(dt) {
 function updateBattle(dt) {
   updateInfantry(dt);
   updateBaseExchange(dt);
+  updateRockets(dt);
   // обновление взрывов
   explosions = explosions.filter(e => { e.l -= dt; return e.l > 0; });
 
@@ -93,6 +94,7 @@ function updateRoundEnd(dt) {
       startGame();
     } else {
       startNextRound();
+      applyDifficultyScaling();
     }
   }
 }
