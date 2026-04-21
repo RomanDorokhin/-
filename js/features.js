@@ -284,19 +284,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     warning.className = 'snake-start-overlay';
     warning.innerHTML = `
       <div class="snake-start-card">
-        <div class="snake-start-kicker">СЕКРЕТ ОБНАРУЖЕН</div>
+        <div class="snake-start-kicker">СЕКРЕТНЫЙ РЕЖИМ</div>
         <div class="snake-start-title">ЗМЕЙКА</div>
         <div class="snake-start-copy">
-          Собери <b>20 добычи</b>.<br>
+          Чтобы <b>засчитать секрет</b>, съешь <b>20 добычи</b>.<br>
           После каждой добычи змейка растет и становится светлее.
         </div>
         <div class="snake-start-rules">
-          <div class="snake-start-rules-title">ИНВЕРСНОЕ УПРАВЛЕНИЕ</div>
+          <div class="snake-start-rules-title">УПРАВЛЕНИЕ</div>
           <div class="snake-start-rules-copy">
-            <b>←</b> ведет вправо<br>
-            <b>→</b> ведет влево<br>
-            <b>↑</b> ведет вниз<br>
-            <b>↓</b> ведет вверх
+            Стрелки или <b>WASD</b>.<br>
+            Оно будет странным, придется привыкнуть.
           </div>
         </div>
         <div class="snake-start-actions">
@@ -304,7 +302,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           <button id="sponsor-quest-close" class="snake-start-ghost" type="button">ВЫЙТИ ИЗ РЕЖИМА</button>
         </div>
         <div class="snake-start-footnote">
-          Нажми кнопку старта, когда будешь готов начать забег.
+          Секрет добавится в счетчик только после 20 добычи.
         </div>
       </div>
     `;
@@ -317,7 +315,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         resetSponsorQuest('РЕЖИМ ЗМЕЙКИ ЗАКРЫТ');
       });
     }
-    setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ ГОТОВ // НАЖМИ НАЧАТЬ', 2600);
+    setSnakeStatus('ЗМЕЙКА ГОТОВА // СЕКРЕТ ЗАСЧИТАЕТСЯ ПОСЛЕ 20 ДОБЫЧИ', 2800);
   }
 
   function renderSnake(cells) {
