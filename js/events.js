@@ -7,6 +7,11 @@ window.OMS = window.OMS || {};
   const U = OMS.utils;
 
   function bindDesktopTrail(clientX, clientY) {
+    if (!Array.isArray(OMS.trailPositions)) OMS.trailPositions = [];
+    if (!Array.isArray(OMS.trailDots)) OMS.trailDots = [];
+    if (!Number.isFinite(OMS.TRAIL_LEN) || OMS.TRAIL_LEN <= 0) OMS.TRAIL_LEN = 0;
+    if (!OMS.TRAIL_LEN || OMS.trailDots.length === 0) return;
+
     OMS.trailPositions.unshift({ x: clientX, y: clientY });
     if (OMS.trailPositions.length > OMS.TRAIL_LEN) OMS.trailPositions.pop();
     OMS.trailDots.forEach((dot, i) => {
