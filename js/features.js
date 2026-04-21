@@ -110,17 +110,21 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (warning) warning.remove();
   }
 
-function beginSponsorQuestPlay() {
-  if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
-  clearSponsorQuestWarning();
-  S.sponsorQuest.ready = true;
-  OMS.audioApi.startSnakeMode();
-  S.sponsorQuest.tickTimer = setInterval(() => {
-    tickSnake();
-  }, S.sponsorQuest.speedMs || 300);
-  OMS.audioApi.playSnakeTurnCue();
-  setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
-}
+  function beginSponsorQuestPlay() {
+    if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
+    clearSponsorQuestWarning();
+    if (S.sponsorQuest.tickTimer) {
+      clearInterval(S.sponsorQuest.tickTimer);
+      S.sponsorQuest.tickTimer = null;
+    }
+    S.sponsorQuest.ready = true;
+    OMS.audioApi.startSnakeMode();
+    S.sponsorQuest.tickTimer = setInterval(() => {
+      tickSnake();
+    }, S.sponsorQuest.speedMs || 300);
+    OMS.audioApi.playSnakeTurnCue();
+    setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
+  }
 
   function finalizeSponsorSecret() {
     const cells = document.querySelectorAll('.noise-cell');
@@ -277,32 +281,43 @@ function beginSponsorQuestPlay() {
     updateSponsorQuestUi();
     const warning = document.createElement('div');
     warning.id = 'sponsor-quest-warning';
+    warning.className = 'snake-start-overlay';
     warning.innerHTML = `
-    <div class="sponsor-warning-card">
-      <div class="sponsor-warning-kicker">СЕКРЕТ ОБНАРУЖЕН</div>
-      <div class="sponsor-warning-title">ЗМЕЙКА</div>
-      <div class="sponsor-warning-copy">
-        Собери <b>20 добычи</b>.<br>
-        После каждой добычи змейка растет и становится светлее.
+      <div class="snake-start-card">
+        <div class="snake-start-kicker">СЕКРЕТ ОБНАРУЖЕН</div>
+        <div class="snake-start-title">ЗМЕЙКА</div>
+        <div class="snake-start-copy">
+          Собери <b>20 добычи</b>.<br>
+          После каждой добычи змейка растет и становится светлее.
+        </div>
+        <div class="snake-start-rules">
+          <div class="snake-start-rules-title">ИНВЕРСНОЕ УПРАВЛЕНИЕ</div>
+          <div class="snake-start-rules-copy">
+            <b>←</b> ведет вправо<br>
+            <b>→</b> ведет влево<br>
+            <b>↑</b> ведет вниз<br>
+            <b>↓</b> ведет вверх
+          </div>
+        </div>
+        <div class="snake-start-actions">
+          <button id="sponsor-quest-start" class="snake-start-button" type="button">НАЧАТЬ</button>
+          <button id="sponsor-quest-close" class="snake-start-ghost" type="button">ВЫЙТИ ИЗ РЕЖИМА</button>
+        </div>
+        <div class="snake-start-footnote">
+          Нажми кнопку старта, когда будешь готов начать забег.
+        </div>
       </div>
-      <div class="sponsor-warning-rules">
-        <span><b>←</b> ведет вправо</span>
-        <span><b>→</b> ведет влево</span>
-        <span><b>↑</b> ведет вниз</span>
-        <span><b>↓</b> ведет вверх</span>
-      </div>
-      <div class="sponsor-warning-foot">
-        Нажми кнопку ниже, когда будешь готов начать.
-      </div>
-      <button id="sponsor-quest-start" class="sponsor-warning-start" type="button">
-        НАЧАТЬ
-      </button>
-    </div>
-  `;
+    `;
     document.body.appendChild(warning);
-  const startBtn = document.getElementById('sponsor-quest-start');
-  if (startBtn) startBtn.addEventListener('click', beginSponsorQuestPlay);
-  setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ ГОТОВ // НАЖМИ НАЧАТЬ', 2600);
+    const startBtn = document.getElementById('sponsor-quest-start');
+    if (startBtn) startBtn.addEventListener('click', beginSponsorQuestPlay);
+    const closeBtn = document.getElementById('sponsor-quest-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        resetSponsorQuest('РЕЖИМ ЗМЕЙКИ ЗАКРЫТ');
+      });
+    }
+    setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ ГОТОВ // НАЖМИ НАЧАТЬ', 2600);
   }
 
   function renderSnake(cells) {

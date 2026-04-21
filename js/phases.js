@@ -21,8 +21,81 @@ window.OMS = window.OMS || {};
   function positionBtn() {
     const bw = R.escapeBtn.offsetWidth + 40;
     const bh = R.escapeBtn.offsetHeight + 20;
-    S.btnX = bw / 2 + Math.random() * Math.max(1, window.innerWidth - bw);
-    S.btnY = bh / 2 + Math.random() * Math.max(1, window.innerHeight - bh);
+    const gridRect = R.noiseGrid ? R.noiseGrid.getBoundingClientRect() : null;
+    const minX = bw / 2;
+    const maxX = Math.max(minX, window.innerWidth - bw / 2);
+    const minY = bh / 2;
+    const maxY = Math.max(minY, window.innerHeight - bh / 2);
+    const avoid = gridRect
+      ? {
+          left: Math.max(minX, gridRect.left - bw / 2 - 24),
+          right: Math.min(maxX, gridRect.right + bw / 2 + 24),
+          top: Math.max(minY, gridRect.top - bh / 2 - 24),
+          bottom: Math.min(maxY, gridRect.bottom + bh / 2 + 24),
+        }
+      : null;
+    let nextX = minX;
+    let nextY = minY;
+    let placed = false;
+    for (let i = 0; i < 24; i++) {
+      nextX = minX + Math.random() * Math.max(1, maxX - minX);
+      nextY = minY + Math.random() * Math.max(1, maxY - minY);
+      if (!avoid || nextX < avoid.left || nextX > avoid.right || nextY < avoid.top || nextY > avoid.bottom) {
+        placed = true;
+        break;
+      }
+    }
+    if (!placed && avoid) {
+      nextX = maxX - 8;
+      nextY = Math.min(maxY, avoid.bottom + 40);
+    }
+    S.btnX = nextX;
+    S.btnY = nextY;
+    R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
+    R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
+  }
+
+  function moveBtnToSafePoint(nextX, nextY) {
+    const bw = R.escapeBtn.offsetWidth + 40;
+    const bh = R.escapeBtn.offsetHeight + 20;
+    const minX = bw / 2;
+    const maxX = Math.max(minX, window.innerWidth - bw / 2);
+    const minY = bh / 2;
+    const maxY = Math.max(minY, window.innerHeight - bh / 2);
+    const gridRect = R.noiseGrid ? R.noiseGrid.getBoundingClientRect() : null;
+    const clampedX = U.clamp(nextX, minX, maxX);
+    const clampedY = U.clamp(nextY, minY, maxY);
+
+    if (
+      !gridRect ||
+      clampedX < gridRect.left - bw / 2 - 24 ||
+      clampedX > gridRect.right + bw / 2 + 24 ||
+      clampedY < gridRect.top - bh / 2 - 24 ||
+      clampedY > gridRect.bottom + bh / 2 + 24
+    ) {
+      S.btnX = clampedX;
+      S.btnY = clampedY;
+    } else {
+      const outsideLeft = Math.max(minX, gridRect.left - bw / 2 - 36);
+      const outsideRight = Math.min(maxX, gridRect.right + bw / 2 + 36);
+      const outsideTop = Math.max(minY, gridRect.top - bh / 2 - 36);
+      const outsideBottom = Math.min(maxY, gridRect.bottom + bh / 2 + 36);
+      const options = [
+        { x: outsideLeft, y: clampedY },
+        { x: outsideRight, y: clampedY },
+        { x: clampedX, y: outsideTop },
+        { x: clampedX, y: outsideBottom },
+      ];
+      const best = options
+        .map((option) => ({
+          ...option,
+          score: Math.abs(option.x - clampedX) + Math.abs(option.y - clampedY),
+        }))
+        .sort((a, b) => a.score - b.score)[0];
+      S.btnX = best.x;
+      S.btnY = best.y;
+    }
+
     R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
     R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
   }
@@ -303,6 +376,7 @@ window.OMS = window.OMS || {};
     showPhase,
     typeVisitorId,
     positionBtn,
+    moveBtnToSafePoint,
     goToPhase2,
     showBanScreen,
     showBanResultOverlay,

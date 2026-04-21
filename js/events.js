@@ -72,10 +72,16 @@ window.OMS = window.OMS || {};
       if (dist < 120) {
         const angle = Math.atan2(dy, dx) + Math.PI;
         const flee = 160 * (S.secretSystems.control.buttonSpeedMultiplier ?? 1);
-        S.btnX = U.clamp(S.btnX + Math.cos(angle) * flee, 80, window.innerWidth - 80);
-        S.btnY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 80);
-        R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
-        R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
+        const nextX = U.clamp(S.btnX + Math.cos(angle) * flee, 80, window.innerWidth - 80);
+        const nextY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 80);
+        if (OMS.phases && OMS.phases.moveBtnToSafePoint) {
+          OMS.phases.moveBtnToSafePoint(nextX, nextY);
+        } else {
+          S.btnX = nextX;
+          S.btnY = nextY;
+          R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
+          R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
+        }
       }
     });
 
@@ -215,10 +221,16 @@ window.OMS = window.OMS || {};
         if (!t) return;
         const angle = Math.atan2(t.clientY - S.btnY, t.clientX - S.btnX) + Math.PI;
         const flee = 180 * (S.secretSystems.control.buttonSpeedMultiplier ?? 1);
-        S.btnX = U.clamp(S.btnX + Math.cos(angle) * flee, 60, window.innerWidth - 60);
-        S.btnY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 120);
-        R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
-        R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
+        const nextX = U.clamp(S.btnX + Math.cos(angle) * flee, 60, window.innerWidth - 60);
+        const nextY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 120);
+        if (OMS.phases && OMS.phases.moveBtnToSafePoint) {
+          OMS.phases.moveBtnToSafePoint(nextX, nextY);
+        } else {
+          S.btnX = nextX;
+          S.btnY = nextY;
+          R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
+          R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
+        }
       }, { passive: false });
 
       R.escapeBtn.addEventListener('touchend', e => {
