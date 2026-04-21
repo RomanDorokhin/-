@@ -75,6 +75,8 @@ window.OMS = window.OMS || {};
       'STAVROPOL', 'MAHACHKALA', 'SOCHI', 'SIMFEROPOL', 'SEVASTOPOL', 'ODESSA', 'KHARKIV', 'DNIPRO', 'DONETSK', 'ZAPORIZHZHYA'
     ],
     KONAMI: ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'],
+    BAN_REASON_KEY: 'oms_ban_reason',
+    PENDING_FORBIDDEN_SECRET_KEY: 'oms_pending_forbidden_secret',
     SECRET_STORAGE_KEY: 'oms_secrets_v1',
     SECRET_DEFS: [
       {
@@ -94,8 +96,8 @@ window.OMS = window.OMS || {};
       {
         id: 'forbidden_button',
         title: 'ЗАПРЕТНЫЙ КЛИК',
-        hint: 'Иногда стоит нажать то, что нельзя.',
-        description: 'Кнопка "НЕ НАЖИМАТЬ" была нажата.',
+        hint: 'Запрет сработает только после полной ловушки.',
+        description: 'Ты прошел бан и подтвердил личность после запретной кнопки.',
         category: 'achievement',
       },
       {
@@ -194,6 +196,10 @@ window.OMS = window.OMS || {};
     secretProgress: {},
     unlockedSecrets: new Set(),
     newSecretCount: 0,
+    pendingForbiddenSecret: false,
+    lastBanReason: 'generic',
+    banTick: null,
+    noiseActionCount: 0,
   };
 
   OMS.audio = {

@@ -443,10 +443,14 @@ window.OMS = window.OMS || {};
       R.escapeBtn.style.display = 'block';
     });
   } else {
+    S.pendingForbiddenSecret = true;
+    S.lastBanReason = 'forbidden_button';
+    try { localStorage.setItem(OMS.constants.PENDING_FORBIDDEN_SECRET_KEY, '1'); } catch (e) {}
+    try { localStorage.setItem(OMS.constants.BAN_REASON_KEY, 'forbidden_button'); } catch (e) {}
     R.escapeBtn.style.display = 'none';
     OMS.effects.triggerGlitch(500);
     OMS.audioApi.playExplosionSound();
-    showAccusationMsg('ТЫ ПРОИГРАЛ', '', '#00ff41', () => OMS.phases.goToPhase3Gameover());
+    showAccusationMsg('ТЫ ПРОИГРАЛ', '', '#00ff41', () => OMS.phases.goToPhase3Gameover('forbidden_button'));
   }
   }
 

@@ -119,6 +119,13 @@
     } catch (e) {
       state.introAccepted = false;
     }
+    try {
+      state.pendingForbiddenSecret = localStorage.getItem(constants.PENDING_FORBIDDEN_SECRET_KEY) === '1';
+      state.lastBanReason = localStorage.getItem(constants.BAN_REASON_KEY) || 'generic';
+    } catch (e) {
+      state.pendingForbiddenSecret = false;
+      state.lastBanReason = 'generic';
+    }
   }
 
   function hideIntroOverlay() {

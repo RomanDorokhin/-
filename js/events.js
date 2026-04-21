@@ -75,7 +75,6 @@ window.OMS = window.OMS || {};
     R.escapeBtn.addEventListener('click', () => {
       S.catchCount++;
       try { localStorage.setItem('oms_catch', String(S.catchCount)); } catch (e) {}
-      if (OMS.secrets) OMS.secrets.unlockSecret('forbidden_button', { source: 'escape_btn_click' });
       OMS.features.applyVariableReinforcement();
     });
 
@@ -181,14 +180,6 @@ window.OMS = window.OMS || {};
         }, 800);
       }
 
-      if (e.key === 'r' || e.key === 'R') {
-        const ban = document.getElementById('ban-screen');
-        if (ban) {
-          try { localStorage.removeItem('oms_ban_until'); } catch (err) {}
-          ban.remove();
-          OMS.phases.resetToPhase1();
-        }
-      }
     });
 
     if (S.isMobile) {
@@ -209,7 +200,6 @@ window.OMS = window.OMS || {};
         if (S.currentPhase !== 2) return;
         S.catchCount++;
         try { localStorage.setItem('oms_catch', String(S.catchCount)); } catch (err) {}
-        if (OMS.secrets) OMS.secrets.unlockSecret('forbidden_button', { source: 'escape_btn_touch' });
         OMS.features.applyVariableReinforcement();
       }, { passive: false });
 

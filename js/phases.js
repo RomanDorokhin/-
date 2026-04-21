@@ -74,40 +74,148 @@ window.OMS = window.OMS || {};
     `;
   }
 
-  function showBanScreen(until) {
-    showPhase(3);
+  function persistBanState() {
+    try {
+      localStorage.setItem(OMS.constants.BAN_REASON_KEY, S.lastBanReason || 'generic');
+      localStorage.setItem(
+        OMS.constants.PENDING_FORBIDDEN_SECRET_KEY,
+        S.pendingForbiddenSecret ? '1' : '0',
+      );
+    } catch (e) {}
+  }
+
+  function clearBanTick() {
+    if (S.banTick) {
+      clearInterval(S.banTick);
+      S.banTick = null;
+    }
+  }
+
+  function showIdentityScreen(until) {
     const old = document.getElementById('ban-screen');
     if (old) old.remove();
     const el = document.createElement('div');
     el.id = 'ban-screen';
-    el.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:VT323,monospace;text-align:center;padding:20px;';
+    el.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:VT323,monospace;text-align:center;padding:20px;';
     el.innerHTML = `
-      <div style="font-size:clamp(36px,8vw,90px);color:#ff0033;text-shadow:0 0 30px #ff0033;letter-spacing:0.05em;">ТЫ ЗАБАНЕН</div>
-      <div id="ban-countdown" style="font-size:clamp(28px,6vw,70px);color:#00ff41;letter-spacing:0.2em;"></div>
-      <div style="font-size:clamp(11px,2vw,18px);color:rgba(0,255,65,0.35);letter-spacing:0.2em;">ПОДОЖДИ ИЛИ НАЖМИ R</div>
+      <div style="font-size:clamp(36px,8vw,90px);color:#ff0033;text-shadow:0 0 30px #ff0033;letter-spacing:0.05em;animation:glitchText 2s infinite;">ПОДТВЕРЖДЕНИЕ ЛИЧНОСТИ</div>
+      <div style="font-size:clamp(13px,2vw,22px);color:rgba(0,255,65,0.5);letter-spacing:0.15em;max-width:500px;line-height:1.6;">
+        СИСТЕМА ЗАФИКСИРОВАЛА НАРУШЕНИЕ<br>
+        ВВЕДИТЕ ИМЯ ДЛЯ ПРОДОЛЖЕНИЯ
+      </div>
+      <input id="identity-name" type="text" placeholder="ВВЕДИТЕ ИМЯ" autocomplete="off" style="
+        font-family:'VT323',monospace;font-size:clamp(20px,3vw,32px);
+        background:#000;border:1px solid rgba(0,255,65,0.4);color:#00ff41;
+        padding:10px 20px;letter-spacing:0.2em;outline:none;
+        text-transform:uppercase;width:260px;text-align:center;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <button id="identity-cam-btn" type="button" style="
+          font-family:'VT323',monospace;font-size:clamp(16px,2.5vw,26px);
+          background:transparent;border:1px solid rgba(0,255,65,0.4);
+          color:#00ff41;padding:10px 24px;cursor:pointer;letter-spacing:0.15em;">
+          РАЗРЕШИТЬ КАМЕРУ
+        </button>
+      </div>
+      <div id="identity-error" style="font-size:clamp(11px,1.8vw,16px);color:#ff0033;letter-spacing:0.2em;min-height:20px;"></div>
+      <video id="identity-video" autoplay muted playsinline style="display:none;width:180px;height:135px;border:1px solid #00ff41;"></video>
+      <div id="ban-countdown" style="font-size:clamp(20px,3vw,32px);color:rgba(0,255,65,0.7);letter-spacing:0.15em;"></div>
     `;
     document.body.appendChild(el);
-    const tick = setInterval(() => {
+
+    const startIdentity = () => {
+      const nameEl = document.getElementById('identity-name');
+      const errEl = document.getElementById('identity-error');
+      const videoEl = document.getElementById('identity-video');
+      const name = nameEl ? nameEl.value.trim().toUpperCase() : '';
+
+      if (!name) {
+        if (errEl) errEl.textContent = 'ВВЕДИТЕ ИМЯ';
+        return;
+      }
+      try { localStorage.setItem('oms_name', name); } catch (e) {}
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (errEl) errEl.textContent = 'КАМЕРА НЕДОСТУПНА';
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          window._activeStream = stream;
+          if (videoEl) {
+            videoEl.style.display = 'block';
+            videoEl.srcObject = stream;
+          }
+          if (errEl) errEl.textContent = 'ИДЕНТИФИКАЦИЯ...';
+          setTimeout(() => {
+            try { stream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+            window._activeStream = null;
+            try { localStorage.setItem('oms_identity', '1'); } catch (e) {}
+            try { localStorage.removeItem('oms_ban_until'); } catch (e) {}
+            clearBanTick();
+            const ban = document.getElementById('ban-screen');
+            if (ban) ban.remove();
+            window.__banned = false;
+            showPhase(2);
+            if (S.lastBanReason === 'forbidden_button' && S.pendingForbiddenSecret && OMS.secrets) {
+              OMS.secrets.unlockSecret('forbidden_button', { source: 'ban_identity_camera' });
+            }
+            S.pendingForbiddenSecret = false;
+            S.lastBanReason = 'generic';
+            persistBanState();
+            try { localStorage.removeItem('oms_catch'); } catch (e) {}
+            S.catchCount = 0;
+            OMS.features.showAccusationMsg(name, 'МЫ ЗНАЕМ КАК ТЫ ВЫГЛЯДИШЬ', '#ff0033');
+          }, 2000);
+        })
+        .catch(() => {
+          if (errEl) errEl.textContent = 'НУЖЕН ДОСТУП К КАМЕРЕ';
+        });
+    };
+
+    const camBtn = document.getElementById('identity-cam-btn');
+    const input = document.getElementById('identity-name');
+    if (camBtn) camBtn.addEventListener('click', startIdentity);
+    if (input) {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') startIdentity();
+      });
+    }
+  }
+
+  function showBanScreen(until) {
+    showPhase(3);
+    window.__banned = true;
+    showIdentityScreen(until);
+    clearBanTick();
+    S.banTick = setInterval(() => {
       const left = Math.max(0, until - Date.now());
       const m = Math.floor(left / 60000).toString().padStart(2, '0');
       const s = Math.floor((left % 60000) / 1000).toString().padStart(2, '0');
       const cd = document.getElementById('ban-countdown');
-      if (cd) cd.textContent = `${m}:${s}`;
+      if (cd) cd.textContent = `БАН: ${m}:${s}`;
       if (left <= 0) {
-        clearInterval(tick);
+        clearBanTick();
         try { localStorage.removeItem('oms_ban_until'); } catch (e) {}
-        el.remove();
+        const ban = document.getElementById('ban-screen');
+        if (ban) ban.remove();
+        window.__banned = false;
+        S.pendingForbiddenSecret = false;
+        S.lastBanReason = 'generic';
+        persistBanState();
         resetToPhase1();
       }
     }, 1000);
   }
 
-  function goToPhase3Gameover() {
+  function goToPhase3Gameover(reason = 'generic') {
     OMS.audioApi.playExplosionSound();
     OMS.effects.triggerGlitch(900);
+    S.lastBanReason = reason;
     const banDuration = Math.max(1, S.catchCount) * 60 * 1000;
     const banUntil = Date.now() + banDuration;
     try { localStorage.setItem('oms_ban_until', String(banUntil)); } catch (e) {}
+    persistBanState();
     setTimeout(() => {
       showPhase(3);
       showBanResultOverlay();
@@ -179,6 +287,12 @@ window.OMS = window.OMS || {};
     R.escapeBtn.style.display = 'none';
     R.statusLine.style.opacity = '0';
     R.globalPresence.style.opacity = '0';
+    clearBanTick();
+    const ban = document.getElementById('ban-screen');
+    if (ban) ban.remove();
+    S.pendingForbiddenSecret = false;
+    S.lastBanReason = 'generic';
+    persistBanState();
     showPhase(0);
     S.totalMouseDist = 0;
     OMS.audioApi.playGlitchSound();
