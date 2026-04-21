@@ -564,9 +564,33 @@ window.OMS = window.OMS || {};
 
   function moveSponsorCell(dx, dy) {
     if (S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    const cells = document.querySelectorAll('.noise-cell');
+    if (!cells.length) return;
+
     if (!S.sponsorQuest.active) {
+      const oldIdx = S.sponsorGridY * 10 + S.sponsorGridX;
+      const oldCell = cells[oldIdx];
+      if (oldCell) {
+        leaveSponsorTrace(oldCell);
+        oldCell.classList.remove('sponsor');
+        clearSponsorClickBindings(oldCell);
+      }
+
+      S.sponsorGridX = Math.max(0, Math.min(9, S.sponsorGridX + dx));
+      S.sponsorGridY = Math.max(0, Math.min(9, S.sponsorGridY + dy));
+      const newIdx = S.sponsorGridY * 10 + S.sponsorGridX;
+      const newCell = cells[newIdx];
+      if (newCell) {
+        newCell.classList.add('sponsor');
+        const lbl = newCell.querySelector('.cell-label');
+        if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+        bindSponsorDoubleClick(newCell);
+        OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
+        setTimeout(OMS.effects.hideTooltip, 700);
+      }
+
       const now = Date.now();
-      if (now - (S.sponsorQuest.lastTapAt || 0) <= 1200) {
+      if (now - (S.sponsorQuest.lastTapAt || 0) <= 420) {
         startSponsorQuest();
       }
       S.sponsorQuest.lastTapAt = now;
