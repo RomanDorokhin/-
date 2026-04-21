@@ -104,6 +104,23 @@ window.OMS = window.OMS || {};
     document.addEventListener('keydown', e => {
       S.lastActivity = Date.now();
 
+      if (S.currentPhase === 2 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'A', 'd', 'D', 'w', 'W', 's', 'S', 'ф', 'Ф', 'в', 'В', 'ц', 'Ц', 'ы', 'Ы'].includes(e.key)) {
+        e.preventDefault();
+        OMS.audioApi.initAudio();
+        const map = {
+          ArrowLeft: [1, 0],
+          ArrowRight: [-1, 0],
+          ArrowUp: [0, 1],
+          ArrowDown: [0, -1],
+          a: [1, 0], A: [1, 0], ф: [1, 0], Ф: [1, 0],
+          d: [-1, 0], D: [-1, 0], в: [-1, 0], В: [-1, 0],
+          w: [0, 1], W: [0, 1], ц: [0, 1], Ц: [0, 1],
+          s: [0, -1], S: [0, -1], ы: [0, -1], Ы: [0, -1],
+        };
+        OMS.features.moveSponsorCell(map[e.key][0], map[e.key][1]);
+        return;
+      }
+
       if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
         OMS.features.toggleEmergencyExit();
         S.ebtState = S.eeActive ? 'e' : '';
@@ -169,22 +186,6 @@ window.OMS = window.OMS || {};
       if ((e.key === '`' || e.key === 'ё' || e.key === '~' || e.key === 'Ё') && S.currentPhase >= 1) {
         if (OMS.secrets) OMS.secrets.unlockSecret('console_access', { source: 'keyboard' });
         OMS.main.toggleSecretConsole();
-      }
-
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'A', 'd', 'D', 'w', 'W', 's', 'S', 'ф', 'Ф', 'в', 'В', 'ц', 'Ц', 'ы', 'Ы'].includes(e.key) && S.currentPhase === 2) {
-        e.preventDefault();
-        OMS.audioApi.initAudio();
-        const map = {
-          ArrowLeft: [1, 0],
-          ArrowRight: [-1, 0],
-          ArrowUp: [0, 1],
-          ArrowDown: [0, -1],
-          a: [1, 0], A: [1, 0], ф: [1, 0], Ф: [1, 0],
-          d: [-1, 0], D: [-1, 0], в: [-1, 0], В: [-1, 0],
-          w: [0, 1], W: [0, 1], ц: [0, 1], Ц: [0, 1],
-          s: [0, -1], S: [0, -1], ы: [0, -1], Ы: [0, -1],
-        };
-        OMS.features.moveSponsorCell(map[e.key][0], map[e.key][1]);
       }
 
       if (e.key === 'Enter' && S.currentPhase >= 1) {
