@@ -104,6 +104,16 @@ window.OMS = window.OMS || {};
     document.addEventListener('keydown', e => {
       S.lastActivity = Date.now();
 
+      if (S.currentPhase === 2 && S.sponsorQuest.active && !S.sponsorQuest.ready) {
+        const isModifierOnly = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key);
+        if (!isModifierOnly) {
+          e.preventDefault();
+          OMS.audioApi.initAudio();
+          OMS.features.beginSponsorQuestPlay();
+          return;
+        }
+      }
+
       if (S.currentPhase === 2) {
         const isArrowControl = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
         const isSnakeOnlyWasd = ['a', 'A', 'd', 'D', 'w', 'W', 's', 'S', 'ф', 'Ф', 'в', 'В', 'ц', 'Ц', 'ы', 'Ы'].includes(e.key);

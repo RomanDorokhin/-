@@ -110,6 +110,24 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (warning) warning.remove();
   }
 
+  function handleSponsorQuestOverlayKey(event) {
+    if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
+    if (event.defaultPrevented) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const ignored = new Set([
+      'Shift',
+      'Control',
+      'Alt',
+      'Meta',
+      'CapsLock',
+      'Tab',
+      'Escape',
+    ]);
+    if (ignored.has(event.key)) return;
+    event.preventDefault();
+    beginSponsorQuestPlay();
+  }
+
   function beginSponsorQuestPlay() {
     if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
     clearSponsorQuestWarning();
@@ -207,6 +225,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     clearTimeout(S.sponsorQuest.completeTimer);
     clearTimeout(S.sponsorQuest.statusTimer);
     clearSponsorQuestWarning();
+    document.removeEventListener('keydown', handleSponsorQuestOverlayKey, true);
     S.sponsorQuest.active = false;
     S.sponsorQuest.ready = false;
     S.sponsorQuest.score = 0;
@@ -315,7 +334,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         resetSponsorQuest('РЕЖИМ ЗМЕЙКИ ЗАКРЫТ');
       });
     }
-    setSnakeStatus('ЗМЕЙКА ГОТОВА // СЕКРЕТ ЗАСЧИТАЕТСЯ ПОСЛЕ 20 ДОБЫЧИ', 2800);
+    document.removeEventListener('keydown', handleSponsorQuestOverlayKey, true);
+    document.addEventListener('keydown', handleSponsorQuestOverlayKey, true);
+    setSnakeStatus('ЗМЕЙКА ГОТОВА // НАЖМИ ЛЮБУЮ КЛАВИШУ ИЛИ КНОПКУ СТАРТА', 3200);
   }
 
   function renderSnake(cells) {
