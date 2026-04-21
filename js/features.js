@@ -95,7 +95,7 @@ window.OMS = window.OMS || {};
 
   function paintQuestTarget(cells) {
     if (!S.sponsorQuest.active) return;
-    const idx = S.sponsorQuest.food.y * 10 + S.sponsorQuest.food.x;
+    const idx = S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x;
     const cell = cells[idx];
     if (!cell) return;
     clearQuestCellMark(cell);
@@ -169,8 +169,8 @@ window.OMS = window.OMS || {};
       ox = Math.floor(Math.random() * 10);
       oy = Math.floor(Math.random() * 10);
     } while (forbidden.has(oy * 10 + ox));
-    S.sponsorQuest.food.x = ox;
-    S.sponsorQuest.food.y = oy;
+    S.sponsorQuest.objective.x = ox;
+    S.sponsorQuest.objective.y = oy;
     document.body.classList.add('snake-mode');
     cells.forEach((cell) => {
       clearSponsorClickBindings(cell);
@@ -233,8 +233,8 @@ window.OMS = window.OMS || {};
       ox = Math.floor(Math.random() * 10);
       oy = Math.floor(Math.random() * 10);
     } while (occupied.has(oy * 10 + ox));
-    S.sponsorQuest.food.x = ox;
-    S.sponsorQuest.food.y = oy;
+    S.sponsorQuest.objective.x = ox;
+    S.sponsorQuest.objective.y = oy;
     paintQuestTarget(cells);
   }
 
@@ -273,11 +273,11 @@ window.OMS = window.OMS || {};
     S.sponsorQuest.snakeTail.push(nextIdx);
     S.sponsorGridX = nx;
     S.sponsorGridY = ny;
-    const foodCell = cells[S.sponsorQuest.food.y * 10 + S.sponsorQuest.food.x];
+    const foodCell = cells[S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x];
     if (foodCell && !foodCell.querySelector('.quest-target')) {
       paintQuestTarget(cells);
     }
-    const hitFood = nx === S.sponsorQuest.food.x && ny === S.sponsorQuest.food.y;
+    const hitFood = nx === S.sponsorQuest.objective.x && ny === S.sponsorQuest.objective.y;
     if (hitFood) {
       S.sponsorQuest.score += 1;
       if (R.statusLine) {

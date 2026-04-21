@@ -246,7 +246,7 @@ window.OMS = window.OMS || {};
       active: false,
       score: 0,
       targetScore: 20,
-      objective: { x: 7, y: 2 },
+      food: { x: 7, y: 2 },
       snakeTail: [],
       directionX: 1,
       directionY: 0,
