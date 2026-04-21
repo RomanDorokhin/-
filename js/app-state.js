@@ -105,16 +105,16 @@ window.OMS = window.OMS || {};
       {
         id: 'casino',
         title: 'ПАРА-КЛУБ',
-        hint: 'Спонсор любит стрелки, но в квесте всё наоборот.',
-        description: 'Квест спонсора пройден: реверс-управление и 7 меток собраны.',
+        hint: 'Спонсор реагирует на двойной клик.',
+        description: 'Открыта интерактивная казино-вставка спонсора.',
         category: 'interactive',
         action: 'casino',
       },
       {
         id: 'sponsor_snake',
         title: 'ЗМЕЯ СПОНСОРА',
-        hint: 'Стрелки иногда ведут не туда, куда ждешь.',
-        description: 'Квест с реверсивным управлением пройден и засчитан.',
+        hint: 'В секретном режиме стрелки работают наоборот.',
+        description: 'Секретный режим пройден: 100 очков набраны в реверс-змейке.',
         category: 'achievement',
       },
       {
@@ -245,9 +245,10 @@ window.OMS = window.OMS || {};
     sponsorQuest: {
       active: false,
       score: 0,
-      targetScore: 7,
+      targetScore: 100,
       objective: { x: 7, y: 2 },
       snakeTail: [],
+      lastTapAt: 0,
     },
     secretSystems: {
       controlPower: 0,

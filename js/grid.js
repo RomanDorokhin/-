@@ -104,12 +104,6 @@ window.OMS = window.OMS || {};
     sc.classList.add('sponsor');
     const lbl = sc.querySelector('.cell-label');
     if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
-    let lastTap = 0;
-    sc.addEventListener('click', () => {
-      const now = Date.now();
-      if (now - lastTap < 420) OMS.features.showCasinoAd();
-      lastTap = now;
-    });
   }
 
   OMS.grid = {

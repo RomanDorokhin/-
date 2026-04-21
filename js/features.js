@@ -21,6 +21,77 @@ window.OMS = window.OMS || {};
     if (mark) mark.remove();
   }
 
+  function clearSponsorClickBindings(cell) {
+    if (!cell) return;
+    if (cell._sponsorClickHandler) {
+      cell.removeEventListener('click', cell._sponsorClickHandler);
+      cell._sponsorClickHandler = null;
+    }
+    if (cell._sponsorTapState) {
+      cell._sponsorTapState.lastTap = 0;
+    }
+  }
+
+  function bindSponsorDoubleClick(cell) {
+    if (!cell) return;
+    if (!cell._sponsorTapState) cell._sponsorTapState = { lastTap: 0 };
+    if (cell._sponsorClickHandler) return;
+    const handler = () => {
+      const now = Date.now();
+      const state = cell._sponsorTapState;
+      if (now - state.lastTap < 420) showCasinoAd();
+      state.lastTap = now;
+    };
+    cell._sponsorClickHandler = handler;
+    cell.addEventListener('click', handler);
+  }
+
+  function clearSponsorQuestUi() {
+    const panel = document.getElementById('sponsor-quest-panel');
+    if (panel) panel.remove();
+  }
+
+  function ensureSponsorQuestUi() {
+    let panel = document.getElementById('sponsor-quest-panel');
+    if (panel) return panel;
+    panel = document.createElement('div');
+    panel.id = 'sponsor-quest-panel';
+    panel.style.cssText = `
+      position:fixed;right:20px;bottom:90px;z-index:220;
+      border:1px solid rgba(255,170,0,0.55);background:rgba(0,0,0,0.88);
+      box-shadow:0 0 16px rgba(255,170,0,0.18);padding:8px 10px;
+      min-width:220px;font-family:'Share Tech Mono',monospace;
+      color:rgba(255,170,0,0.95);letter-spacing:0.08em;
+    `;
+    panel.innerHTML = `
+      <div style="font-size:10px;opacity:0.9;">СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА</div>
+      <div id="sponsor-quest-score" style="font-size:12px;margin-top:4px;">ОЧКИ: 0 / 100</div>
+      <button id="sponsor-quest-exit" type="button" style="
+        margin-top:8px;font-family:'VT323',monospace;font-size:16px;
+        background:#ff0033;color:#fff;border:none;padding:4px 10px;cursor:pointer;letter-spacing:0.15em;">
+        ВЫЙТИ ИЗ РЕЖИМА
+      </button>
+    `;
+    document.body.appendChild(panel);
+    const exitBtn = document.getElementById('sponsor-quest-exit');
+    if (exitBtn) {
+      exitBtn.addEventListener('click', () => {
+        resetSponsorQuest('РЕЖИМ ЗМЕЙКИ ЗАКРЫТ');
+      });
+    }
+    return panel;
+  }
+
+  function updateSponsorQuestUi() {
+    if (!S.sponsorQuest.active) {
+      clearSponsorQuestUi();
+      return;
+    }
+    ensureSponsorQuestUi();
+    const scoreEl = document.getElementById('sponsor-quest-score');
+    if (scoreEl) scoreEl.textContent = `ОЧКИ: ${S.sponsorQuest.score} / ${S.sponsorQuest.targetScore}`;
+  }
+
   function paintQuestTarget(cells) {
     if (!S.sponsorQuest.active) return;
     const idx = S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x;
@@ -45,6 +116,7 @@ window.OMS = window.OMS || {};
     S.sponsorQuest.snakeTail = [];
     const cells = document.querySelectorAll('.noise-cell');
     cells.forEach((cell) => clearQuestCellMark(cell));
+    updateSponsorQuestUi();
     if (reason && R.statusLine && S.currentPhase >= 1) {
       R.statusLine.textContent = reason;
       R.statusLine.style.opacity = '1';
@@ -68,10 +140,11 @@ window.OMS = window.OMS || {};
     S.sponsorQuest.objective.x = ox;
     S.sponsorQuest.objective.y = oy;
     paintQuestTarget(cells);
+    updateSponsorQuestUi();
     if (R.statusLine) {
-      R.statusLine.textContent = 'КВЕСТ: РЕВЕРС-ЗМЕЙКА // СОБЕРИ 7 МЕТОК';
+      R.statusLine.textContent = 'СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА // СОБЕРИ 100 ОЧКОВ';
       R.statusLine.style.opacity = '1';
-      setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2200);
+      setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2600);
     }
   }
 
@@ -336,22 +409,28 @@ window.OMS = window.OMS || {};
     sc.classList.add('sponsor');
     const lbl = sc.querySelector('.cell-label');
     if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
-    let lastTap = 0;
-    sc.addEventListener('click', () => {
-      const now = Date.now();
-      if (now - lastTap < 420) showCasinoAd();
-      lastTap = now;
-    });
+    bindSponsorDoubleClick(sc);
   }
 
   function moveSponsorCell(dx, dy) {
   if (S.currentPhase !== 2 || S.lifetimeLimitReached) return;
   const cells = document.querySelectorAll('.noise-cell');
   const cols = 10;
+
+  if (!S.sponsorQuest.active) {
+    const now = Date.now();
+    if (now - (S.sponsorQuest.lastTapAt || 0) <= 1200) {
+      startSponsorQuest();
+    }
+    S.sponsorQuest.lastTapAt = now;
+    return;
+  }
+
   const oldIdx = S.sponsorGridY * cols + S.sponsorGridX;
   if (cells[oldIdx]) {
     leaveSponsorTrace(cells[oldIdx]);
     cells[oldIdx].classList.remove('sponsor');
+    clearSponsorClickBindings(cells[oldIdx]);
   }
 
   if (S.sponsorQuest.active) {
@@ -361,8 +440,14 @@ window.OMS = window.OMS || {};
     if (S.sponsorQuest.snakeTail.length > 6) S.sponsorQuest.snakeTail.shift();
   }
 
-  S.sponsorGridX = Math.max(0, Math.min(cols - 1, S.sponsorGridX + dx));
-  S.sponsorGridY = Math.max(0, Math.min(9, S.sponsorGridY + dy));
+  const nextX = S.sponsorGridX + dx;
+  const nextY = S.sponsorGridY + dy;
+  if (S.sponsorQuest.active && (nextX < 0 || nextX > 9 || nextY < 0 || nextY > 9)) {
+    resetSponsorQuest('КРАЙ СЕТКИ: ОЧКИ СБРОШЕНЫ');
+    return;
+  }
+  S.sponsorGridX = Math.max(0, Math.min(cols - 1, nextX));
+  S.sponsorGridY = Math.max(0, Math.min(9, nextY));
   const newIdx = S.sponsorGridY * cols + S.sponsorGridX;
   const newCell = cells[newIdx];
   if (!newCell) return;
@@ -376,13 +461,16 @@ window.OMS = window.OMS || {};
   newCell.classList.add('sponsor');
   const lbl = newCell.querySelector('.cell-label');
   if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+  bindSponsorDoubleClick(newCell);
 
   if (S.sponsorQuest.active) {
     const hitObjective = S.sponsorGridX === S.sponsorQuest.objective.x && S.sponsorGridY === S.sponsorQuest.objective.y;
     if (hitObjective) {
       S.sponsorQuest.score += 1;
+      if (S.sponsorQuest.snakeTail.length < 30) S.sponsorQuest.snakeTail.push(newIdx);
+      updateSponsorQuestUi();
       if (R.statusLine) {
-        R.statusLine.textContent = `КВЕСТ: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`;
+        R.statusLine.textContent = `ЗМЕЙКА: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`;
         R.statusLine.style.opacity = '1';
         setTimeout(() => { R.statusLine.style.opacity = '0'; }, 900);
       }
@@ -405,11 +493,9 @@ window.OMS = window.OMS || {};
     } else {
       paintQuestTarget(cells);
     }
-    OMS.effects.showTooltip(`КВЕСТ: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`, newCell);
+    OMS.effects.showTooltip(`ЗМЕЙКА: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`, newCell);
   } else {
     OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
-    const atEdge = S.sponsorGridX === 0 || S.sponsorGridX === 9 || S.sponsorGridY === 0 || S.sponsorGridY === 9;
-    if (atEdge) startSponsorQuest();
   }
   setTimeout(OMS.effects.hideTooltip, 800);
   }
@@ -653,7 +739,7 @@ window.OMS = window.OMS || {};
     openNews,
     toggleEmergencyExit,
     setupPassiveFeatures,
-    injectSponsorCell: OMS.grid.injectSponsorCell,
+    injectSponsorCell,
     tutNext: () => {},
   };
 })();
