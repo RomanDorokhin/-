@@ -54,6 +54,35 @@ window.OMS = window.OMS || {};
     }, duration);
   }
 
+  function triggerHeavyGlitch(level = 1) {
+    const bars = 8 + Math.floor(level * 10);
+    const duration = 350 + Math.floor(level * 500);
+    R.glitchOverlay.innerHTML = '';
+    R.glitchOverlay.style.opacity = '1';
+    for (let i = 0; i < bars; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'glitch-bar';
+      bar.style.height = `${3 + Math.random() * (12 + level * 14)}px`;
+      bar.style.top = `${Math.random() * 100}%`;
+      bar.style.opacity = `${0.25 + Math.random() * 0.7}`;
+      bar.style.background = Math.random() > 0.4 ? '#ff0033' : '#00ff41';
+      R.glitchOverlay.appendChild(bar);
+    }
+    const timer = setInterval(() => {
+      R.glitchOverlay.querySelectorAll('.glitch-bar').forEach((b) => {
+        b.style.top = `${Math.random() * 100}%`;
+        b.style.opacity = `${0.2 + Math.random() * 0.8}`;
+        b.style.height = `${2 + Math.random() * (16 + level * 18)}px`;
+      });
+      OMS.audioApi.playGlitchSound();
+    }, Math.max(35, 70 - Math.floor(level * 12)));
+    setTimeout(() => {
+      clearInterval(timer);
+      R.glitchOverlay.style.opacity = '0';
+      R.glitchOverlay.innerHTML = '';
+    }, duration);
+  }
+
   function showTooltip(text, el) {
     const r = el.getBoundingClientRect();
     R.tooltip.innerHTML = text;
@@ -86,6 +115,7 @@ window.OMS = window.OMS || {};
   OMS.effects = {
     triggerExplosion,
     triggerGlitch,
+    triggerHeavyGlitch,
     showTooltip,
     hideTooltip,
     spawnClickRipple,

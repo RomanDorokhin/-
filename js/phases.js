@@ -165,6 +165,7 @@ window.OMS = window.OMS || {};
             persistBanState();
             try { localStorage.removeItem('oms_catch'); } catch (e) {}
             S.catchCount = 0;
+            if (OMS.secrets) OMS.secrets.recomputeSystems();
             OMS.features.showAccusationMsg(name, 'МЫ ЗНАЕМ КАК ТЫ ВЫГЛЯДИШЬ', '#ff0033');
           }, 2000);
         })

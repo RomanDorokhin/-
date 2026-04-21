@@ -9,7 +9,10 @@
 
   function updateSessionTick() {
     state.sessionSeconds += 1;
-    refs.progressTop.style.width = `${Math.min(state.sessionSeconds / constants.SESSION_LIMIT_SECONDS * 100, 100)}%`;
+    const basePct = Math.min(state.sessionSeconds / constants.SESSION_LIMIT_SECONDS * 100, 100);
+    const drain = state.secretSystems.risk.sessionLimitScale || 1;
+    const warpedPct = Math.min(basePct * drain, 100);
+    refs.progressTop.style.width = `${warpedPct}%`;
     refs.sessionTime.innerHTML = `SESSION<br>${helpers.formatSession(state.sessionSeconds)}`;
 
     if (state.currentPhase >= 1) {
@@ -34,7 +37,8 @@
       state.basePresence = 1000 + Math.floor(Math.random() * 337);
       state.presenceVal = state.basePresence;
     }
-    state.presenceVal = Math.max(800, state.basePresence + Math.floor(state.sessionSeconds * 1.5) + drift);
+    const metaMul = state.secretSystems.meta.presenceMultiplier || 1;
+    state.presenceVal = Math.max(800, Math.floor((state.basePresence + Math.floor(state.sessionSeconds * 1.5) + drift) * metaMul));
     refs.presenceCounter.textContent = state.presenceVal.toLocaleString('ru');
   }
 
@@ -85,6 +89,9 @@
       'АНОМАЛИЯ ОБНАРУЖЕНА',
     ];
     refs.statusLine.textContent = `SYSTEM: ${msgs[Math.floor(Math.random() * msgs.length)]}`;
+    if ((state.secretSystems.world.glitchBars || 1) > 1) {
+      refs.statusLine.textContent += ' // RESONANCE';
+    }
     refs.statusLine.style.opacity = '1';
     setTimeout(() => { refs.statusLine.style.opacity = '0'; }, 2000);
   }

@@ -20,6 +20,13 @@ html, body {
   user-select: none;
 }
 
+body.secret-world-shift {
+  filter:
+    hue-rotate(calc(28deg + var(--world-hue-rotate, 0deg)))
+    saturate(var(--world-saturate, 1))
+    contrast(1.08);
+}
+
 #canvas {
   position: fixed;
   top: 0; left: 0;
@@ -89,6 +96,17 @@ html, body {
 .phase.active {
   opacity: 1;
   pointer-events: all;
+}
+
+body.secret-input-inverted #canvas,
+body.secret-input-inverted #noise,
+body.secret-input-inverted #scanlines,
+body.secret-input-inverted #phase1,
+body.secret-input-inverted #phase2,
+body.secret-input-inverted #phase3,
+body.secret-input-inverted #phase4,
+body.secret-input-inverted #phase-cat {
+  transform: scaleX(-1);
 }
 
 #phase1 { z-index: 10; }

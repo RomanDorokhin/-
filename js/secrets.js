@@ -9,6 +9,94 @@ window.OMS = window.OMS || {};
   const HINT_COOLDOWN_MS = 9000;
   let statusResetTimer = 0;
 
+  function getImprint(secretId) {
+    const existing = S.secretSystems.imprints[secretId];
+    if (existing) return existing;
+    const seedBase = C.SECRET_DEFS.findIndex((d) => d.id === secretId) + 1;
+    const imprint = {
+      control: ((seedBase * 17) % 13) + 8,
+      world: ((seedBase * 29) % 13) + 8,
+      risk: ((seedBase * 43) % 13) + 8,
+      meta: ((seedBase * 61) % 13) + 8,
+    };
+    S.secretSystems.imprints[secretId] = imprint;
+    return imprint;
+  }
+
+  function rebuildSecretSystemsFromUnlocks() {
+    const base = S.secretSystems;
+    base.controlPower = 0;
+    base.worldPower = 0;
+    base.riskPower = 0;
+    base.metaXp = 0;
+
+    S.unlockedSecrets.forEach((secretId) => {
+      const imprint = getImprint(secretId);
+      base.controlPower += imprint.control;
+      base.worldPower += imprint.world;
+      base.riskPower += imprint.risk;
+      base.metaXp += imprint.meta;
+    });
+
+    const cp = base.controlPower;
+    const wp = base.worldPower;
+    const rp = base.riskPower;
+    const mxp = base.metaXp;
+
+    const controlScale = 1 + cp / 320;
+    base.control.phaseEntryDistance = Math.round(300 + cp * 1.2);
+    base.control.fleeDistance = Math.round(160 + cp * 0.6);
+    base.control.invertChance = Math.min(0.32, 0.02 + cp / 900);
+    base.control.arrowStep = 1 + Math.floor(cp / 36);
+    base.control.doubleSpaceWindowMs = Math.max(180, 400 - cp);
+    base.control.controlScale = controlScale;
+    base.control.buttonSpeedMultiplier = 1 + cp / 260;
+    base.control.invertEnabled = cp >= 28;
+    base.control.shaderSpeedBoost = 1 + cp / 220;
+    base.control.mouseVelocityScale = Math.min(2.2, 1 + cp / 260);
+
+    base.world.phaseDelayMs = Math.max(900, 3500 - wp * 22);
+    base.world.glitchBars = 1 + Math.floor(wp / 12);
+    base.world.countdownDrain = 1 + Math.floor(wp / 24);
+    base.world.hueRotate = Math.min(120, wp * 1.4);
+    base.world.saturate = Math.min(2.1, 1 + wp / 180);
+    base.world.shaderPhaseOffset = Math.min(2, Math.floor(wp / 35));
+    base.world.phaseNoiseBoost = Math.floor(wp / 25);
+    base.world.glitchIntervalMultiplier = Math.max(0.35, 1 - wp / 220);
+
+    base.risk.banMultiplier = 1 + rp / 120;
+    base.risk.jackpotBonus = rp / 14;
+    base.risk.punishmentBias = Math.min(0.55, rp / 180);
+    base.risk.rewardBias = Math.min(0.35, rp / 260);
+    base.risk.sessionLimitScale = Math.min(2, 1 + rp / 180);
+    base.risk.sessionDrainMultiplier = Math.min(2.4, 1 + rp / 140);
+
+    base.meta.level = 1 + Math.floor(mxp / 85);
+    base.meta.xp = mxp;
+    base.meta.relicSlots = 1 + Math.floor(base.meta.level / 2);
+    base.meta.title = base.meta.level >= 6
+      ? 'ARCHITECT'
+      : base.meta.level >= 4
+      ? 'SIGNAL HUNTER'
+      : base.meta.level >= 2
+      ? 'TRACE RUNNER'
+      : 'INIT';
+    base.meta.presenceMultiplier = Math.min(2.8, 1 + base.meta.level * 0.12 + mxp / 900);
+
+    S.runtime.controlScale = base.control.controlScale;
+    S.runtime.buttonSpeedMultiplier = base.control.buttonSpeedMultiplier;
+    S.runtime.invertControls = base.control.invertEnabled;
+
+    document.body.classList.toggle('secret-input-inverted', S.runtime.invertControls);
+    document.body.classList.toggle('secret-world-shift', base.world.hueRotate > 18);
+    document.body.style.filter = `hue-rotate(${base.world.hueRotate.toFixed(1)}deg) saturate(${base.world.saturate.toFixed(2)})`;
+  }
+
+  function formatImpactLine(secretId) {
+    const imprint = getImprint(secretId);
+    return `CTRL+${imprint.control} WORLD+${imprint.world} RISK+${imprint.risk} META+${imprint.meta}`;
+  }
+
   function readProgress() {
     try {
       const raw = localStorage.getItem(C.SECRET_STORAGE_KEY);
@@ -188,7 +276,8 @@ window.OMS = window.OMS || {};
     updateBackpackBadge();
     renderBackpack();
     S.lastHintText = '';
-    flashStatusLine(`СЕКРЕТ ОТКРЫТ: ${def.title}`);
+    rebuildSecretSystemsFromUnlocks();
+    flashStatusLine(`СЕКРЕТ ОТКРЫТ: ${def.title} // ${formatImpactLine(secretId)}`);
     return true;
   }
 
@@ -249,6 +338,7 @@ window.OMS = window.OMS || {};
     updateCounter();
     updateBackpackBadge();
     renderBackpack();
+    rebuildSecretSystemsFromUnlocks();
     bindUi();
   }
 
@@ -270,5 +360,14 @@ window.OMS = window.OMS || {};
         total: getTotalSecrets(),
       };
     },
+    getGameplayProfile() {
+      return {
+        control: { ...S.secretSystems.control },
+        world: { ...S.secretSystems.world },
+        risk: { ...S.secretSystems.risk },
+        meta: { ...S.secretSystems.meta },
+      };
+    },
+    recomputeSystems: rebuildSecretSystemsFromUnlocks,
   };
 })();

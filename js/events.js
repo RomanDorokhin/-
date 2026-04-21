@@ -25,7 +25,8 @@ window.OMS = window.OMS || {};
   function setupInputHandlers() {
     document.addEventListener('mousemove', e => {
       S.lastActivity = Date.now();
-      const dx = e.clientX - S.lastMX;
+      const controlScale = S.secretSystems.control.controlScale ?? 1;
+      const dx = (e.clientX - S.lastMX) * controlScale;
       const dy = e.clientY - S.lastMY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       S.mouseVel = Math.min(dist / 20, 1);
@@ -65,8 +66,9 @@ window.OMS = window.OMS || {};
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 120) {
         const angle = Math.atan2(dy, dx) + Math.PI;
-        S.btnX = U.clamp(S.btnX + Math.cos(angle) * 160, 80, window.innerWidth - 80);
-        S.btnY = U.clamp(S.btnY + Math.sin(angle) * 160, 80, window.innerHeight - 80);
+        const flee = 160 * (S.secretSystems.control.buttonSpeedMultiplier ?? 1);
+        S.btnX = U.clamp(S.btnX + Math.cos(angle) * flee, 80, window.innerWidth - 80);
+        S.btnY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 80);
         R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
         R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
       }
@@ -142,7 +144,11 @@ window.OMS = window.OMS || {};
         if (S.currentPhase >= 1 && now - S.lastSpace < 400) {
           S.flipped = !S.flipped;
           document.body.style.transition = 'transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55)';
-          document.body.style.transform = S.flipped ? 'rotate(180deg)' : 'rotate(0deg)';
+          if (S.secretSystems.control.invertControls) {
+            document.body.style.transform = S.flipped ? 'rotate(-180deg)' : 'rotate(0deg)';
+          } else {
+            document.body.style.transform = S.flipped ? 'rotate(180deg)' : 'rotate(0deg)';
+          }
           if (OMS.secrets) OMS.secrets.unlockSecret('double_space', { source: 'double_space' });
           OMS.audioApi.playGlitchSound();
         }
@@ -202,8 +208,9 @@ window.OMS = window.OMS || {};
         const t = e.touches[0];
         if (!t) return;
         const angle = Math.atan2(t.clientY - S.btnY, t.clientX - S.btnX) + Math.PI;
-        S.btnX = U.clamp(S.btnX + Math.cos(angle) * 180, 60, window.innerWidth - 60);
-        S.btnY = U.clamp(S.btnY + Math.sin(angle) * 180, 80, window.innerHeight - 120);
+        const flee = 180 * (S.secretSystems.control.buttonSpeedMultiplier ?? 1);
+        S.btnX = U.clamp(S.btnX + Math.cos(angle) * flee, 60, window.innerWidth - 60);
+        S.btnY = U.clamp(S.btnY + Math.sin(angle) * flee, 80, window.innerHeight - 120);
         R.escapeBtn.style.left = `${S.btnX - R.escapeBtn.offsetWidth / 2}px`;
         R.escapeBtn.style.top = `${S.btnY - R.escapeBtn.offsetHeight / 2}px`;
       }, { passive: false });
@@ -219,7 +226,8 @@ window.OMS = window.OMS || {};
       document.addEventListener('touchmove', e => {
         const t = e.touches[0];
         if (!t) return;
-        const dx = t.clientX - S.lastMX;
+        const controlScale = S.secretSystems.control.controlScale ?? 1;
+        const dx = (t.clientX - S.lastMX) * controlScale;
         const dy = t.clientY - S.lastMY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         S.mouseVel = Math.min(dist / 20, 1.0);

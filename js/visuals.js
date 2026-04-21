@@ -138,13 +138,18 @@ window.OMS = window.OMS || {};
     const t = (now - S.startTs) / 1000;
 
     if (V.gl && V.program) {
-      S.smoothSpeed += (S.mouseVel - S.smoothSpeed) * 0.05;
+      const controlMod = S.secretSystems.control;
+      const worldMod = S.secretSystems.world;
+      const speedBoost = controlMod.shaderSpeedBoost;
+      const mouseVelScale = controlMod.mouseVelocityScale;
+      const phaseOffset = worldMod.shaderPhaseOffset;
+      S.smoothSpeed += (S.mouseVel * mouseVelScale - S.smoothSpeed) * 0.05;
       V.gl.uniform1f(V.uniforms.time, t);
       V.gl.uniform2f(V.uniforms.res, V.width, V.height);
       V.gl.uniform2f(V.uniforms.mouse, S.mouseX, V.height - S.mouseY);
-      V.gl.uniform1f(V.uniforms.mouseVel, S.mouseVel);
-      V.gl.uniform1i(V.uniforms.phase, S.currentPhase);
-      V.gl.uniform1f(V.uniforms.speed, S.smoothSpeed);
+      V.gl.uniform1f(V.uniforms.mouseVel, S.mouseVel * mouseVelScale);
+      V.gl.uniform1i(V.uniforms.phase, Math.max(0, S.currentPhase + phaseOffset));
+      V.gl.uniform1f(V.uniforms.speed, S.smoothSpeed * speedBoost);
       V.gl.drawArrays(V.gl.TRIANGLE_STRIP, 0, 4);
     }
 
