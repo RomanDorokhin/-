@@ -5,6 +5,7 @@
   const visit = OMS.visit;
   const constants = OMS.constants;
   const helpers = OMS.utils;
+  const INTRO_STORAGE_KEY = 'oms_intro_seen';
 
   function updateSessionTick() {
     state.sessionSeconds += 1;
@@ -112,6 +113,50 @@
         state.currentVolume = parseInt(savedVol, 10) / 100;
       }
     } catch (e) {}
+    try {
+      state.introAccepted = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+    } catch (e) {
+      state.introAccepted = false;
+    }
+  }
+
+  function hideIntroOverlay() {
+    if (!refs.introOverlay) return;
+    refs.introOverlay.classList.add('hidden');
+    refs.introOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function showIntroOverlay() {
+    if (!refs.introOverlay) return;
+    refs.introOverlay.classList.remove('hidden');
+    refs.introOverlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function initIntroFlow() {
+    if (!refs.introStartBtn) return;
+    if (state.introAccepted) {
+      hideIntroOverlay();
+    } else {
+      showIntroOverlay();
+    }
+    refs.introStartBtn.addEventListener('click', () => {
+      state.introAccepted = true;
+      try { localStorage.setItem(INTRO_STORAGE_KEY, '1'); } catch (e) {}
+      hideIntroOverlay();
+      OMS.effects.triggerGlitch(260);
+      OMS.audioApi.playGlitchSound();
+      refs.statusLine.textContent = 'СЕАНС РАСКРЫТИЯ СЕКРЕТОВ АКТИВЕН';
+      refs.statusLine.style.opacity = '1';
+      setTimeout(() => { refs.statusLine.style.opacity = '0'; }, 2200);
+      if (OMS.secrets) OMS.secrets.showHint();
+    });
+  }
+
+  function showVisitBadge() {
+    const m = Math.floor(visit.data.totalSeconds / 60).toString().padStart(2, '0');
+    const s = (visit.data.totalSeconds % 60).toString().padStart(2, '0');
+    refs.visitBadge.innerHTML = `ВИЗИТ #${visit.data.count}<br>ИТОГО: ${m}:${s}`;
+    refs.visitBadge.style.opacity = '1';
   }
 
   function bindGlobalVisibilityHandlers() {
@@ -229,6 +274,7 @@
     window.showCatPhase = OMS.phases.showCatPhase;
     window.openNews = OMS.features.openNews;
     window.tutNext = () => OMS.features.tutNext();
+    window.toggleBackpack = OMS.secrets.toggleBackpack;
     OMS.main = { showVisitBadge, toggleSecretConsole };
   }
 
@@ -242,6 +288,7 @@
   function init() {
     initPersistentState();
     initVisitData();
+    initIntroFlow();
     initManifestAndPwa();
     initBroadcastChannel();
     bindGlobalVisibilityHandlers();
@@ -250,6 +297,7 @@
     OMS.visuals.initVisualSystems();
     OMS.grid.buildNoiseGrid();
     OMS.features.injectSponsorCell();
+    OMS.secrets.init();
     OMS.audioApi.setupAudioUi();
     OMS.events.setupInputHandlers();
     OMS.features.setupPassiveFeatures();
@@ -281,6 +329,7 @@
       <div style="color:rgba(0,255,65,0.2);margin-top:4px;">[ ~ / ё — закрыть ]</div>
     `;
     document.body.appendChild(el);
+    OMS.secrets.unlockSecret('console_access', { source: 'hotkey_console' });
   }
 
   init();

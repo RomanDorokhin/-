@@ -35,8 +35,10 @@ window.OMS = window.OMS || {};
   }
 
   function goToPhase2() {
+    if (!S.introAccepted) return;
     if (S.exploded) return;
     S.exploded = true;
+    if (OMS.secrets) OMS.secrets.unlockSecret('entry_signal', { source: 'phase_transition' });
     OMS.audioApi.playExplosionSound();
     OMS.effects.triggerExplosion();
     setTimeout(() => {
@@ -158,6 +160,7 @@ window.OMS = window.OMS || {};
     S.catNextSec = 86400;
     OMS.effects.triggerGlitch(1300);
     OMS.audioApi.playExplosionSound();
+    if (OMS.secrets) OMS.secrets.unlockSecret('cat_revelation', { source: 'countdown_zero' });
   }
 
   function resetFromCat() {
