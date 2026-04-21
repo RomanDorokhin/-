@@ -156,7 +156,6 @@
       refs.statusLine.textContent = 'СЕАНС РАСКРЫТИЯ СЕКРЕТОВ АКТИВЕН';
       refs.statusLine.style.opacity = '1';
       setTimeout(() => { refs.statusLine.style.opacity = '0'; }, 2200);
-      if (OMS.secrets) OMS.secrets.showHint();
     });
   }
 

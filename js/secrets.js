@@ -80,7 +80,7 @@ window.OMS = window.OMS || {};
 
     unlockedDefs.forEach((def) => {
       const card = document.createElement('article');
-      card.className = 'secret-card unlocked';
+      card.className = `secret-card unlocked ${def.category === 'interactive' ? 'interactive' : 'achievement'}`;
 
       const title = document.createElement('h4');
       title.className = 'secret-card-title';
@@ -92,6 +92,11 @@ window.OMS = window.OMS || {};
 
       card.appendChild(title);
       card.appendChild(description);
+
+      const kind = document.createElement('p');
+      kind.className = 'secret-card-kind';
+      kind.textContent = def.category === 'interactive' ? 'ИНТЕРАКТИВНЫЙ СЕКРЕТ' : 'ЗАФИКСИРОВАНО В КОЛЛЕКЦИИ';
+      card.appendChild(kind);
 
       if (def.category === 'interactive' && def.action) {
         const actionBtn = document.createElement('button');
@@ -129,22 +134,22 @@ window.OMS = window.OMS || {};
   function getNoiseHint() {
     const unlockCount = getUnlockedCount();
     const poolEarly = [
-      'ПОДСКАЗКА: иногда запрет — это указатель.',
-      'ПОДСКАЗКА: повтор одного и того же иногда что-то меняет.',
-      'ПОДСКАЗКА: не все сигналы находятся мышкой.',
+      'ШУМ: иногда запрет и есть маршрут.',
+      'ШУМ: повтор одного действия может сдвинуть фазу.',
+      'ШУМ: не все входы открываются курсором.',
     ];
     const poolMid = [
-      'ПОДСКАЗКА: часть маршрутов любит клавиши, а не клики.',
-      'ПОДСКАЗКА: странное поведение интерфейса — не всегда баг.',
-      'ПОДСКАЗКА: некоторые каналы реагируют только на настойчивость.',
+      'ШУМ: часть маршрутов реагирует на клавиши.',
+      'ШУМ: странное поведение интерфейса не всегда ошибка.',
+      'ШУМ: некоторые каналы проверяют настойчивость.',
     ];
     const poolLate = [
-      'ПОДСКАЗКА: ты уже близко. Ищи неочевидные комбинации.',
-      'ПОДСКАЗКА: сервисные символы иногда открывают второе дно.',
-      'ПОДСКАЗКА: пропущенные шаги обычно самые простые.',
+      'ШУМ: ищи короткие комбинации, не только одиночные действия.',
+      'ШУМ: сервисные символы иногда полезнее меню.',
+      'ШУМ: самый простой шаг чаще всего пропускают.',
     ];
     const poolDone = [
-      'ПОДСКАЗКА: в этой версии ты собрал всё, что доступно.',
+      'ШУМ: в этой сборке ты снял все текущие сигналы.',
     ];
     const pool = unlockCount >= getTotalSecrets()
       ? poolDone
@@ -161,10 +166,11 @@ window.OMS = window.OMS || {};
     queueHint(getNoiseHint());
   }
 
-  function registerNoiseAction() {
-    if (S.currentPhase < 2) return;
+  function markMeaninglessAction(kind = 'noise') {
+    if (S.currentPhase < 1) return;
     S.noiseActionCount += 1;
-    if (S.noiseActionCount < 3) return;
+    const threshold = kind === 'enter_news' ? 3 : 4;
+    if (S.noiseActionCount < threshold) return;
     S.noiseActionCount = 0;
     showHint();
   }
@@ -253,7 +259,7 @@ window.OMS = window.OMS || {};
       return S.unlockedSecrets.has(secretId);
     },
     showHint,
-    registerNoiseAction,
+    markMeaninglessAction,
     openBackpack,
     closeBackpack,
     toggleBackpack,
