@@ -21,8 +21,9 @@ window.OMS = window.OMS || {};
     S.casinoShown = false;
   });
   document.body.appendChild(overlay);
-  triggerGlitch(260);
-  playGlitchSound();
+  OMS.effects.triggerGlitch(260);
+  OMS.audioApi.playGlitchSound();
+  if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor' });
   }
 
   function injectSponsorCell() {
@@ -78,6 +79,7 @@ window.OMS = window.OMS || {};
     S.tokyoClicks = 0;
   });
   document.body.appendChild(el);
+  if (OMS.secrets) OMS.secrets.unlockSecret('godzilla', { source: 'tokyo_clicks' });
   }
 
   function triggerScreamer() {
@@ -225,6 +227,7 @@ window.OMS = window.OMS || {};
       S.eeTotalDist = 0;
       R.emergencyExit.classList.add('active');
       if (OMS.audio.ctx && OMS.audio.masterGain) OMS.audio.masterGain.gain.linearRampToValueAtTime(0, OMS.audio.ctx.currentTime + 0.2);
+      if (OMS.secrets) OMS.secrets.unlockSecret('emergency_exit', { source: 'hotkey' });
     } else {
       R.emergencyExit.classList.remove('active');
       R.emergencyTint.style.opacity = '0';

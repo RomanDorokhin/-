@@ -34,7 +34,7 @@ window.OMS = window.OMS || {};
       S.lastMY = S.mouseY = e.clientY;
       R.coords.innerHTML = `X: ${String(e.clientX).padStart(4, '0')}<br>Y: ${String(e.clientY).padStart(4, '0')}<br>Δ: ${S.mouseVel.toFixed(3)}`;
 
-      if (S.currentPhase === 0 && S.totalMouseDist > 300 && !S.exploded && !window.__banned) {
+      if (S.currentPhase === 0 && S.totalMouseDist > 300 && !S.exploded && !window.__banned && S.introAccepted) {
         OMS.audioApi.initAudio();
         OMS.phases.goToPhase2();
       }
@@ -75,6 +75,7 @@ window.OMS = window.OMS || {};
     R.escapeBtn.addEventListener('click', () => {
       S.catchCount++;
       try { localStorage.setItem('oms_catch', String(S.catchCount)); } catch (e) {}
+      if (OMS.secrets) OMS.secrets.unlockSecret('forbidden_button', { source: 'escape_btn_click' });
       OMS.features.applyVariableReinforcement();
     });
 
@@ -112,6 +113,7 @@ window.OMS = window.OMS || {};
         S.konamiIdx++;
         if (S.konamiIdx === OMS.constants.KONAMI.length) {
           S.konamiIdx = 0;
+          if (OMS.secrets) OMS.secrets.unlockSecret('konami', { source: 'keyboard' });
           OMS.effects.triggerExplosion();
           OMS.effects.triggerGlitch(2800);
           R.statusLine.textContent = 'KONAMI CODE: ПРИНЯТ. ЧТО ТЫ ОЖИДАЛ?';
@@ -134,6 +136,7 @@ window.OMS = window.OMS || {};
       }
 
       if ((e.key === '`' || e.key === 'ё' || e.key === '~' || e.key === 'Ё') && S.currentPhase >= 1) {
+        if (OMS.secrets) OMS.secrets.unlockSecret('console_access', { source: 'keyboard' });
         OMS.main.toggleSecretConsole();
       }
 
@@ -203,6 +206,7 @@ window.OMS = window.OMS || {};
         if (S.currentPhase !== 2) return;
         S.catchCount++;
         try { localStorage.setItem('oms_catch', String(S.catchCount)); } catch (err) {}
+        if (OMS.secrets) OMS.secrets.unlockSecret('forbidden_button', { source: 'escape_btn_touch' });
         OMS.features.applyVariableReinforcement();
       }, { passive: false });
 
@@ -217,7 +221,7 @@ window.OMS = window.OMS || {};
         S.lastMX = S.mouseX = t.clientX;
         S.lastMY = S.mouseY = t.clientY;
         S.lastActivity = Date.now();
-        if (S.currentPhase === 0 && S.totalMouseDist > 150 && !S.exploded) {
+        if (S.currentPhase === 0 && S.totalMouseDist > 150 && !S.exploded && S.introAccepted) {
           OMS.audioApi.initAudio();
           OMS.phases.goToPhase2();
         }

@@ -22,6 +22,34 @@
 
 <div id="status-line">SYSTEM: INITIALIZING... VISITOR AUTHENTICATED</div>
 
+<div id="intro-overlay" class="intro-overlay">
+  <div class="intro-card">
+    <h1 class="intro-title">SITE OF SECRETS</h1>
+    <p class="intro-text">
+      Ты вошел на сайт секретов. Сколько их здесь — никто не знает.
+      Раскрывай сигналы, следы и аномалии, чтобы заполнить коллекцию.
+    </p>
+    <p class="intro-subtext">Подсказки будут короткими. Решения придется находить самому.</p>
+    <button id="intro-start-btn" type="button">НАЧАТЬ ОХОТУ</button>
+  </div>
+</div>
+
+<div id="secrets-hud">
+  <div id="secret-counter">СЕКРЕТЫ: 0/0</div>
+  <button id="backpack-btn" type="button">РЮКЗАК</button>
+</div>
+
+<div id="backpack-modal" aria-hidden="true">
+  <div class="backpack-sheet">
+    <div class="backpack-head">
+      <h2>КОЛЛЕКЦИЯ СЕКРЕТОВ</h2>
+      <button id="backpack-close" type="button">✕</button>
+    </div>
+    <div id="backpack-progress">НАЙДЕНО: 0 ИЗ 0</div>
+    <div id="backpack-grid"></div>
+  </div>
+</div>
+
 <div id="session-time">
   SESSION<br>00:00:00
 </div>
@@ -188,6 +216,7 @@
 <div id="tooltip"></div>
 
 <script src="js/app-state.js"></script>
+<script src="js/secrets.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/effects.js"></script>
 <script src="js/visuals.js"></script>

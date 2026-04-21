@@ -12,6 +12,8 @@ window.OMS = window.OMS || {};
     statusLine: document.getElementById('status-line'),
     countdown: document.getElementById('countdown'),
     visitorId: document.getElementById('visitor-id'),
+    phase4: document.getElementById('phase4'),
+    phaseCat: document.getElementById('phase-cat'),
     tooltip: document.getElementById('tooltip'),
     progressTop: document.getElementById('progress-top'),
     waveform: document.getElementById('waveform'),
@@ -29,6 +31,8 @@ window.OMS = window.OMS || {};
     pwaBanner: document.getElementById('pwa-banner'),
     pwaInstallBtn: document.getElementById('pwa-install-btn'),
     visitBadge: document.getElementById('visit-badge'),
+    introOverlay: document.getElementById('intro-overlay'),
+    introStartBtn: document.getElementById('intro-start-btn'),
     emergencyExit: document.getElementById('emergency-exit'),
     emergencyDesktop: document.getElementById('ee-desktop'),
     emergencyTint: document.getElementById('ee-tint'),
@@ -36,6 +40,12 @@ window.OMS = window.OMS || {};
     tutorialText: document.getElementById('tut-text'),
     tutorialButton: document.getElementById('tut-btn'),
     wtfMsg: document.getElementById('wtf-msg'),
+    secretCounter: document.getElementById('secret-counter'),
+    backpackBtn: document.getElementById('backpack-btn'),
+    backpackModal: document.getElementById('backpack-modal'),
+    backpackGrid: document.getElementById('backpack-grid'),
+    backpackProgress: document.getElementById('backpack-progress'),
+    backpackClose: document.getElementById('backpack-close'),
   };
 
   OMS.constants = {
@@ -65,6 +75,74 @@ window.OMS = window.OMS || {};
       'STAVROPOL', 'MAHACHKALA', 'SOCHI', 'SIMFEROPOL', 'SEVASTOPOL', 'ODESSA', 'KHARKIV', 'DNIPRO', 'DONETSK', 'ZAPORIZHZHYA'
     ],
     KONAMI: ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'],
+    SECRET_STORAGE_KEY: 'oms_secrets_v1',
+    SECRET_DEFS: [
+      {
+        id: 'entry_signal',
+        title: 'ПЕРВЫЙ СИГНАЛ',
+        hint: 'Сделай первый шаг в сеанс.',
+        description: 'Ты вошел в основной цикл сайта.',
+        category: 'achievement',
+      },
+      {
+        id: 'first_cell',
+        title: 'ПЕРВЫЙ КАНАЛ',
+        hint: 'Открой любую ячейку.',
+        description: 'Открыта первая ячейка в сетке шумов.',
+        category: 'achievement',
+      },
+      {
+        id: 'forbidden_button',
+        title: 'ЗАПРЕТНЫЙ КЛИК',
+        hint: 'Иногда стоит нажать то, что нельзя.',
+        description: 'Кнопка "НЕ НАЖИМАТЬ" была нажата.',
+        category: 'achievement',
+      },
+      {
+        id: 'casino',
+        title: 'ПАРА-КЛУБ',
+        hint: 'Ищи спонсора среди ячеек.',
+        description: 'Найдена интерактивная вставка с казино.',
+        category: 'interactive',
+        action: 'casino',
+      },
+      {
+        id: 'godzilla',
+        title: 'TOKYO INCIDENT',
+        hint: 'Одна из локаций реагирует на навязчивость.',
+        description: 'Событие с TOKYO было активировано.',
+        category: 'achievement',
+      },
+      {
+        id: 'emergency_exit',
+        title: 'EMERGENCY EXIT',
+        hint: 'Проверь системные горячие клавиши.',
+        description: 'Открыт режим экстренного экрана.',
+        category: 'achievement',
+      },
+      {
+        id: 'konami',
+        title: 'KONAMI TRACE',
+        hint: 'Старый код иногда работает.',
+        description: 'Введен классический Konami-код.',
+        category: 'achievement',
+      },
+      {
+        id: 'cat_revelation',
+        title: 'КОШАЧИЙ ЦИКЛ',
+        hint: 'Сеанс когда-нибудь заканчивается.',
+        description: 'Достигнута финальная кошачья фаза.',
+        category: 'achievement',
+      },
+      {
+        id: 'console_access',
+        title: 'ТЕНЕВАЯ КОНСОЛЬ',
+        hint: 'Некоторые символы открывают сервисный слой.',
+        description: 'Открыта скрытая консоль наблюдения.',
+        category: 'interactive',
+        action: 'console',
+      },
+    ],
   };
 
   OMS.state = {
@@ -94,7 +172,7 @@ window.OMS = window.OMS || {};
     userCity: '',
     idleShowing: false,
     lastActivity: Date.now(),
-    ebatState: '',
+    ebtState: '',
     konamiIdx: 0,
     typedBuffer: '',
     typedTimer: null,
@@ -111,6 +189,11 @@ window.OMS = window.OMS || {};
     startTs: 0,
     lastRandGlitch: 0,
     cellClickCount: 0,
+    introAccepted: false,
+    statusHoldUntil: 0,
+    secretProgress: {},
+    unlockedSecrets: new Set(),
+    newSecretCount: 0,
   };
 
   OMS.audio = {

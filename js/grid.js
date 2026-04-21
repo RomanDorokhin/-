@@ -60,6 +60,9 @@ window.OMS = window.OMS || {};
         setTimeout(() => cell.classList.remove('flipped'), 1900);
         onCellClick();
         S.seenPct = Math.min(99, S.seenPct + 0.25);
+        if (OMS.secrets && S.cellClickCount === 1) {
+          OMS.secrets.unlockSecret('first_cell', { source: 'grid_click' });
+        }
 
         if (OMS.audio.ctx && OMS.audio.masterGain) {
           const o = OMS.audio.ctx.createOscillator();
@@ -79,14 +82,14 @@ window.OMS = window.OMS || {};
         S.activeCells.add(i);
         cell.classList.add('active');
         OMS.effects.showTooltip(`CHANNEL: ${C.LOCATIONS[i % C.LOCATIONS.length]}`, cell);
-        OMS.audio.modulateDrone(100 + i * 8);
+        OMS.audioApi.modulateDrone(100 + i * 8);
       });
 
       cell.addEventListener('mouseleave', () => {
         cell.classList.remove('active');
         S.activeCells.delete(i);
         OMS.effects.hideTooltip();
-        OMS.audio.modulateDrone(55);
+        OMS.audioApi.modulateDrone(55);
       });
 
       R.noiseGrid.appendChild(cell);

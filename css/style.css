@@ -438,6 +438,239 @@ html, body {
   white-space: nowrap;
 }
 
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.88);
+  padding: 24px;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#intro-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.intro-card {
+  width: min(680px, 92vw);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  background: rgba(0, 0, 0, 0.95);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.12);
+  padding: clamp(20px, 4vw, 36px);
+  text-align: center;
+}
+
+.intro-title {
+  font-family: 'VT323', monospace;
+  font-size: clamp(28px, 6vw, 66px);
+  color: var(--acid);
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
+}
+
+.intro-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(12px, 1.9vw, 17px);
+  color: rgba(0, 255, 65, 0.88);
+  line-height: 1.8;
+  letter-spacing: 0.04em;
+}
+
+.intro-subtext {
+  margin-top: 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(10px, 1.5vw, 13px);
+  color: rgba(0, 255, 65, 0.52);
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+}
+
+#intro-start-btn {
+  margin-top: 22px;
+  font-family: 'VT323', monospace;
+  font-size: clamp(18px, 2.8vw, 30px);
+  letter-spacing: 0.24em;
+  color: #000;
+  background: var(--acid);
+  border: none;
+  padding: 10px 30px;
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(0, 255, 65, 0.4);
+}
+
+#intro-start-btn:hover {
+  background: var(--dim-acid);
+}
+
+#secrets-hud {
+  position: fixed;
+  top: 48px;
+  right: 20px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#secret-counter {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: rgba(0, 255, 65, 0.7);
+  letter-spacing: 0.14em;
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  background: rgba(0, 0, 0, 0.85);
+  padding: 5px 8px;
+}
+
+#backpack-btn {
+  position: relative;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  letter-spacing: 0.18em;
+  color: #000;
+  background: var(--acid);
+  border: none;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+#backpack-btn:hover {
+  background: var(--dim-acid);
+}
+
+#backpack-btn[data-badge]::after {
+  content: attr(data-badge);
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: #ff0033;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+#backpack-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+}
+
+#backpack-modal.open {
+  display: flex;
+}
+
+.backpack-sheet {
+  width: min(900px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  background: rgba(0, 0, 0, 0.96);
+  padding: 16px;
+}
+
+.backpack-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.backpack-head h2 {
+  font-family: 'VT323', monospace;
+  font-size: clamp(24px, 3.8vw, 40px);
+  letter-spacing: 0.12em;
+  color: var(--acid);
+}
+
+#backpack-close {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  color: rgba(0, 255, 65, 0.9);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  background: transparent;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+
+#backpack-progress {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: rgba(0, 255, 65, 0.65);
+  margin-bottom: 12px;
+}
+
+#backpack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.secret-card {
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  background: rgba(0, 255, 65, 0.03);
+  padding: 10px;
+}
+
+.secret-card.locked {
+  opacity: 0.65;
+}
+
+.secret-card.unlocked {
+  border-color: rgba(0, 255, 65, 0.45);
+  box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.08);
+}
+
+.secret-card-title {
+  font-family: 'VT323', monospace;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  color: var(--acid);
+  margin-bottom: 6px;
+}
+
+.secret-card-hint,
+.secret-card-description {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.06em;
+  color: rgba(0, 255, 65, 0.75);
+}
+
+.secret-card-description {
+  margin-top: 8px;
+  color: rgba(0, 255, 65, 0.62);
+}
+
+.secret-action-btn {
+  margin-top: 10px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  color: #000;
+  background: var(--acid);
+  border: none;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
 #tooltip {
   position: fixed;
   z-index: 25;
