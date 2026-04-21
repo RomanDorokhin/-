@@ -1,6 +1,13 @@
-function showCasinoAd() {
-  if (S.casinoShown || S.currentPhase !== 2) return;
-  S.casinoShown = true;
+window.OMS = window.OMS || {};
+
+(() => {
+  const OMS = window.OMS;
+  const S = OMS.state;
+  const R = OMS.refs;
+
+  function showCasinoAd() {
+    if (S.casinoShown || S.currentPhase !== 2) return;
+    S.casinoShown = true;
   const overlay = document.createElement('div');
   overlay.id = 'casino-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:VT323,monospace;text-align:center;cursor:pointer;';
@@ -16,47 +23,47 @@ function showCasinoAd() {
   document.body.appendChild(overlay);
   triggerGlitch(260);
   playGlitchSound();
-}
+  }
 
-function injectSponsorCell() {
-  const cells = document.querySelectorAll('.noise-cell');
-  const idx = 42;
-  const sc = cells[idx];
-  if (!sc) return;
-  sc.classList.add('sponsor');
-  const lbl = sc.querySelector('.cell-label');
-  if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
-  let lastTap = 0;
-  sc.addEventListener('click', () => {
-    const now = Date.now();
-    if (now - lastTap < 420) showCasinoAd();
-    lastTap = now;
-  });
-}
+  function injectSponsorCell() {
+    const cells = document.querySelectorAll('.noise-cell');
+    const idx = 42;
+    const sc = cells[idx];
+    if (!sc) return;
+    sc.classList.add('sponsor');
+    const lbl = sc.querySelector('.cell-label');
+    if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+    let lastTap = 0;
+    sc.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < 420) showCasinoAd();
+      lastTap = now;
+    });
+  }
 
-function moveSponsorCell(dx, dy) {
-  if (app.currentPhase !== 2) return;
+  function moveSponsorCell(dx, dy) {
+  if (S.currentPhase !== 2) return;
   const cells = document.querySelectorAll('.noise-cell');
   const cols = 10;
-  const oldIdx = app.sponsorGridY * cols + app.sponsorGridX;
+  const oldIdx = S.sponsorGridY * cols + S.sponsorGridX;
   if (cells[oldIdx]) cells[oldIdx].classList.remove('sponsor');
-  app.sponsorGridX = Math.max(0, Math.min(cols - 1, app.sponsorGridX + dx));
-  app.sponsorGridY = Math.max(0, Math.min(9, app.sponsorGridY + dy));
-  const newIdx = app.sponsorGridY * cols + app.sponsorGridX;
+  S.sponsorGridX = Math.max(0, Math.min(cols - 1, S.sponsorGridX + dx));
+  S.sponsorGridY = Math.max(0, Math.min(9, S.sponsorGridY + dy));
+  const newIdx = S.sponsorGridY * cols + S.sponsorGridX;
   const newCell = cells[newIdx];
   if (!newCell) return;
   newCell.classList.add('sponsor');
   const lbl = newCell.querySelector('.cell-label');
   if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
-  showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
-  setTimeout(hideTooltip, 800);
-  const atEdge = app.sponsorGridX === 0 || app.sponsorGridX === 9 || app.sponsorGridY === 0 || app.sponsorGridY === 9;
+  OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
+  setTimeout(OMS.effects.hideTooltip, 800);
+  const atEdge = S.sponsorGridX === 0 || S.sponsorGridX === 9 || S.sponsorGridY === 0 || S.sponsorGridY === 9;
   if (atEdge) showCasinoAd();
-}
+  }
 
-function showGodzilla() {
-  triggerGlitch(500);
-  playExplosionSound();
+  function showGodzilla() {
+  OMS.effects.triggerGlitch(500);
+  OMS.audioApi.playExplosionSound();
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:VT323,monospace;text-align:center;cursor:pointer;';
   el.innerHTML = `
@@ -71,27 +78,27 @@ function showGodzilla() {
     S.tokyoClicks = 0;
   });
   document.body.appendChild(el);
-}
+  }
 
-function triggerScreamer() {
-  initAudio();
+  function triggerScreamer() {
+  OMS.audioApi.initAudio();
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:1000;display:flex;align-items:center;justify-content:center;font-family:VT323,monospace;font-size:clamp(100px,25vw,300px);color:#00ff41;text-shadow:0 0 40px #00ff41;';
   overlay.textContent = '3';
   document.body.appendChild(overlay);
-  setTimeout(() => { overlay.textContent = '2'; playGlitchSound(); }, 800);
-  setTimeout(() => { overlay.textContent = '1'; playGlitchSound(); }, 1600);
+  setTimeout(() => { overlay.textContent = '2'; OMS.audioApi.playGlitchSound(); }, 800);
+  setTimeout(() => { overlay.textContent = '1'; OMS.audioApi.playGlitchSound(); }, 1600);
   setTimeout(() => {
     overlay.style.background = '#fff';
     overlay.style.color = '#000';
     overlay.style.fontSize = 'clamp(32px,6vw,64px)';
     overlay.textContent = 'МЫ ВСЁ ЗНАЕМ';
-    playExplosionSound();
+    OMS.audioApi.playExplosionSound();
     setTimeout(() => overlay.remove(), 1000);
   }, 2400);
-}
+  }
 
-function triggerPhoneMeme() {
+  function triggerPhoneMeme() {
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:VT323,monospace;cursor:pointer;gap:12px;';
   el.innerHTML = `
@@ -101,11 +108,11 @@ function triggerPhoneMeme() {
   el.addEventListener('click', () => el.remove());
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 6000);
-}
+  }
 
-function triggerRansheByloLuchshe() {
-  triggerExplosion();
-  playExplosionSound();
+  function triggerRansheByloLuchshe() {
+  OMS.effects.triggerExplosion();
+  OMS.audioApi.playExplosionSound();
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;background:#000;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;cursor:pointer;';
   el.innerHTML = `
@@ -115,9 +122,9 @@ function triggerRansheByloLuchshe() {
   `;
   el.addEventListener('click', () => el.remove());
   document.body.appendChild(el);
-}
+  }
 
-function showAccusationMsg(line1, line2, color = '#00ff41', onDone = null) {
+  function showAccusationMsg(line1, line2, color = '#00ff41', onDone = null) {
   document.querySelectorAll('.accusation-msg').forEach(e => e.remove());
   const el = document.createElement('div');
   el.className = 'accusation-msg';
@@ -163,9 +170,9 @@ function showAccusationMsg(line1, line2, color = '#00ff41', onDone = null) {
     el.remove();
     if (onDone) onDone();
   }, DURATION);
-}
+  }
 
-function applyVariableReinforcement() {
+  function applyVariableReinforcement() {
   const rewards = [['ХОРОШО', ''], ['МОЛОДЕЦ', ''], ['ПРИНЯТО', '']];
   const punishments = [
     ['ТЕБЕ ЖЕ СКАЗАЛИ', 'НЕ НАЖИМАТЬ'],
@@ -178,25 +185,25 @@ function applyVariableReinforcement() {
   if (roll < 0.25) {
     const r = rewards[Math.floor(Math.random() * rewards.length)];
     showAccusationMsg(r[0], r[1], '#00ff41', () => {
-      positionBtn();
+      OMS.phases.positionBtn();
       R.escapeBtn.style.display = 'block';
     });
   } else if (roll < 0.75) {
     const p = punishments[Math.floor(Math.random() * punishments.length)];
-    triggerGlitch(240);
+    OMS.effects.triggerGlitch(240);
     showAccusationMsg(p[0], p[1], '#00ff41', () => {
-      positionBtn();
+      OMS.phases.positionBtn();
       R.escapeBtn.style.display = 'block';
     });
   } else {
     R.escapeBtn.style.display = 'none';
-    triggerGlitch(500);
-    playExplosionSound();
-    showAccusationMsg('ТЫ ПРОИГРАЛ', '', '#00ff41', () => goToPhase3GameOver());
+    OMS.effects.triggerGlitch(500);
+    OMS.audioApi.playExplosionSound();
+    showAccusationMsg('ТЫ ПРОИГРАЛ', '', '#00ff41', () => OMS.phases.goToPhase3Gameover());
   }
-}
+  }
 
-function openNews(url) {
+  function openNews(url) {
   const tip = document.createElement('div');
   tip.style.cssText = `
     position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -210,15 +217,84 @@ function openNews(url) {
     tip.remove();
     window.open(url, '_blank');
   }, 700);
-}
+  }
 
-function openNews(url) {
-  const tip = document.createElement('div');
-  tip.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:VT323,monospace;font-size:clamp(16px,2.5vw,28px);color:#000;background:#fff;padding:12px 24px;z-index:1000;border:2px solid #c00;text-align:center;letter-spacing:0.1em;';
-  tip.textContent = 'ПЕРЕХОД НА ВНЕШНИЙ РЕСУРС...';
-  document.body.appendChild(tip);
-  setTimeout(() => {
-    tip.remove();
-    window.open(url, '_blank');
-  }, 700);
-}
+  function toggleEmergencyExit() {
+    S.eeActive = !S.eeActive;
+    if (S.eeActive) {
+      S.eeTotalDist = 0;
+      R.emergencyExit.classList.add('active');
+      if (OMS.audio.ctx && OMS.audio.masterGain) OMS.audio.masterGain.gain.linearRampToValueAtTime(0, OMS.audio.ctx.currentTime + 0.2);
+    } else {
+      R.emergencyExit.classList.remove('active');
+      R.emergencyTint.style.opacity = '0';
+      if (OMS.audio.ctx && OMS.audio.masterGain && !S.isMuted) OMS.audio.masterGain.gain.linearRampToValueAtTime(S.currentVolume, OMS.audio.ctx.currentTime + 0.2);
+      OMS.effects.triggerGlitch(350);
+    }
+  }
+
+  function setupPassiveFeatures() {
+    const tutShown = (() => { try { return localStorage.getItem('oms_tut'); } catch (e) { return null; } })();
+    if (S.isMobile && !tutShown && R.mobileTutorial) {
+      const steps = [
+        { icon: '👆', text: 'СВАЙПАЙ ПО ЯЧЕЙКАМ\\nЧТОБЫ ОТКРЫТЬ ИХ' },
+        { icon: '🔍', text: 'КАЖДАЯ ЯЧЕЙКА\\nСКРЫВАЕТ ЧТО-ТО' },
+        { icon: '⚠️', text: 'ОСТОРОЖНО\\nМЫ НАБЛЮДАЕМ\\nЗА КАЖДЫМ ДЕЙСТВИЕМ' },
+      ];
+      let i = 0;
+      const iconEl = R.mobileTutorial.querySelector('.tut-icon');
+      const update = () => {
+        const st = steps[i];
+        if (iconEl) iconEl.textContent = st.icon;
+        if (R.tutorialText) R.tutorialText.textContent = st.text;
+        if (R.tutorialButton) R.tutorialButton.textContent = i < steps.length - 1 ? 'ДАЛЕЕ' : 'НАЧАТЬ';
+      };
+      OMS.features.tutNext = () => {
+        i += 1;
+        if (i >= steps.length) {
+          R.mobileTutorial.style.display = 'none';
+          try { localStorage.setItem('oms_tut', '1'); } catch (e) {}
+        } else {
+          update();
+        }
+      };
+      setTimeout(() => {
+        R.mobileTutorial.style.display = 'flex';
+        update();
+      }, 1500);
+    } else {
+      OMS.features.tutNext = () => {};
+    }
+
+    R.emergencyDesktop.addEventListener('mousemove', e => {
+      if (!S.eeActive) return;
+      const rect = R.emergencyDesktop.getBoundingClientRect();
+      const px = `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`;
+      const py = `${((e.clientY - rect.top) / rect.height * 100).toFixed(1)}%`;
+      R.emergencyDesktop.style.setProperty('--mx', px);
+      R.emergencyDesktop.style.setProperty('--my', py);
+      const dx = e.clientX - S.lastMX;
+      const dy = e.clientY - S.lastMY;
+      S.eeTotalDist += Math.sqrt(dx * dx + dy * dy);
+      const bleed = Math.min(S.eeTotalDist / 2000, 0.85);
+      R.emergencyTint.style.opacity = String(bleed);
+      if (bleed >= 0.85) setTimeout(() => { if (S.eeActive) toggleEmergencyExit(); }, 400);
+    });
+  }
+
+  OMS.features = {
+    showCasinoAd,
+    moveSponsorCell,
+    showGodzilla,
+    triggerScreamer,
+    triggerPhoneMeme,
+    triggerRansheByloLuchshe,
+    showAccusationMsg,
+    applyVariableReinforcement,
+    openNews,
+    toggleEmergencyExit,
+    setupPassiveFeatures,
+    injectSponsorCell: OMS.grid.injectSponsorCell,
+    tutNext: () => {},
+  };
+})();

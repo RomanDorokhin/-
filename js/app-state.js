@@ -135,7 +135,7 @@ window.OMS = window.OMS || {};
 
   OMS.api = {};
 
-  OMS.utils = {
+  OMS.helpers = {
     clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
     },
@@ -155,4 +155,6 @@ window.OMS = window.OMS || {};
       return Math.min(99.9, p);
     },
   };
+
+  OMS.utils = OMS.helpers;
 })();
