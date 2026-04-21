@@ -968,6 +968,19 @@ html, body {
   box-shadow: 0 0 8px var(--amber) !important;
 }
 
+.sponsor-trace-star {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+  color: var(--amber);
+  font-size: 8px;
+  opacity: 0.6;
+}
+
 .sponsor-trace {
   position: absolute;
   inset: 2px;

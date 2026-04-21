@@ -4,21 +4,86 @@ window.OMS = window.OMS || {};
   const OMS = window.OMS;
   const S = OMS.state;
   const R = OMS.refs;
+  const sponsorTrail = [];
+  const MAX_SPONSOR_TRAIL = 20;
+  const casinoAds = [
+    { name: 'КАЗИНО', text: 'ВЫИГРАЙ МИЛЛИОН! 100% БОНУС! ТЫ СЛЕДУЮЩИЙ ПОБЕДИТЕЛЬ!', color: '#ff0' },
+    { name: 'КАЗИНО', text: 'ДЖЕКПОТ $1,000,000! РЕГИСТРИРУЙСЯ СЕЙЧАС! ТОЛЬКО СЕГОДНЯ!', color: '#f80' },
+    { name: 'КАЗИНО', text: 'БЕСПЛАТНЫЕ СПИНЫ! ИГРАЙ БЕСПЛАТНО! ВЫВОДИ ДЕНЬГИ!', color: '#0ff' },
+    { name: 'КАЗИНО', text: 'VIP СТАТУС СРАЗУ! БЕЗ ДЕПОЗИТА! БОНУС 500%!', color: '#ff4' },
+    { name: 'КАЗИНО', text: 'СОРВИ КУШ! СЛОТЫ 24/7! МГНОВЕННЫЙ ВЫВОД!', color: '#f0f' },
+  ];
+  const slotSymbols = ['🍒', '7️⃣', '💎', '⭐', '🔔', '🍋', '💰', '🎰', '👑', '🃏'];
 
   function showCasinoAd() {
     if (S.casinoShown || S.currentPhase !== 2) return;
     S.casinoShown = true;
+    const ad = casinoAds[Math.floor(Math.random() * casinoAds.length)];
     const overlay = document.createElement('div');
     overlay.id = 'casino-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,170,0,0.08),rgba(0,0,0,0.95));backdrop-filter:blur(2px);z-index:700;display:flex;align-items:center;justify-content:center;padding:18px;font-family:VT323,monospace;text-align:center;cursor:pointer;';
-    overlay.innerHTML = `
-      <div style="width:min(640px,92vw);border:2px solid rgba(255,170,0,0.7);box-shadow:0 0 50px rgba(255,170,0,0.28), inset 0 0 30px rgba(255,170,0,0.12);background:linear-gradient(180deg,rgba(15,15,10,0.98),rgba(0,0,0,0.98));padding:20px 16px;">
-        <div style="font-size:clamp(14px,2vw,20px);color:rgba(255,255,255,0.55);letter-spacing:0.5em;margin-bottom:6px;">★ ПАРА-КЛУБ ★</div>
-        <div style="font-size:clamp(42px,9vw,100px);color:#ffea00;letter-spacing:0.08em;line-height:0.9;text-shadow:0 0 15px rgba(255,234,0,0.7),0 0 36px rgba(255,170,0,0.4);animation:glitchText 0.8s infinite;">КАЗИНО</div>
-        <div style="margin-top:10px;font-size:clamp(18px,3vw,34px);color:#fff;letter-spacing:0.14em;">ВЫИГРАЙ МИЛЛИОН! <span style="color:#ffea00;">100% БОНУС!</span></div>
-        <div style="margin-top:14px;font-size:clamp(11px,1.5vw,15px);color:rgba(255,255,255,0.35);letter-spacing:0.2em;">[ нажми чтобы закрыть ]</div>
-      </div>
+    overlay.style.cssText = `
+      position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:700;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:16px; font-family:'VT323',monospace; text-align:center; cursor:pointer;
     `;
+    overlay.innerHTML = `
+      <div style="font-size:clamp(28px,5vw,52px);color:${ad.color};
+        text-shadow:0 0 30px ${ad.color};letter-spacing:0.1em;
+        animation:casinoBlink 0.4s step-end infinite;">${ad.name}</div>
+
+      <div id="slot-machine" style="
+        display:flex; gap:4px; padding:16px 24px;
+        background:#111; border:3px solid ${ad.color};
+        box-shadow:0 0 40px ${ad.color}, inset 0 0 20px rgba(0,0,0,0.8);
+      ">
+        <div class="slot-reel" data-reel="0" style="
+          width:80px; height:80px; overflow:hidden; position:relative;
+          border:2px solid rgba(255,255,255,0.2); background:#000;
+          display:flex; align-items:center; justify-content:center;
+          font-size:48px;
+        ">🍒</div>
+        <div class="slot-reel" data-reel="1" style="
+          width:80px; height:80px; overflow:hidden; position:relative;
+          border:2px solid rgba(255,255,255,0.2); background:#000;
+          display:flex; align-items:center; justify-content:center;
+          font-size:48px;
+        ">7️⃣</div>
+        <div class="slot-reel" data-reel="2" style="
+          width:80px; height:80px; overflow:hidden; position:relative;
+          border:2px solid rgba(255,255,255,0.2); background:#000;
+          display:flex; align-items:center; justify-content:center;
+          font-size:48px;
+        ">💎</div>
+      </div>
+
+      <button id="slot-spin-btn" type="button" style="
+        font-family:'VT323',monospace; font-size:clamp(20px,3vw,32px);
+        background:${ad.color}; color:#000; border:none;
+        padding:10px 40px; cursor:pointer; letter-spacing:0.2em;
+        box-shadow:0 0 20px ${ad.color};
+      ">КРУТИТЬ!</button>
+
+      <div id="slot-result" style="
+        font-size:clamp(16px,2.5vw,28px); color:#fff;
+        letter-spacing:0.15em; min-height:36px;
+      "></div>
+
+      <div style="font-size:clamp(12px,1.8vw,20px);color:rgba(255,255,255,0.4);
+        letter-spacing:0.15em;">${ad.text}</div>
+
+      <div style="font-size:clamp(9px,1.2vw,12px);color:rgba(255,255,255,0.15);
+        letter-spacing:0.2em;">18+ НАЖМИ ВНЕ ОКНА ЧТОБЫ ЗАКРЫТЬ</div>
+    `;
+    ensureCasinoStyle();
+    const spinBtn = overlay.querySelector('#slot-spin-btn');
+    const reels = [...overlay.querySelectorAll('.slot-reel')];
+    const resultEl = overlay.querySelector('#slot-result');
+    if (spinBtn) {
+      spinBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        spinSlots({ spinBtn, reels, resultEl, accentColor: ad.color });
+      });
+    }
     overlay.addEventListener('click', () => {
       overlay.remove();
       S.casinoShown = false;
@@ -29,12 +94,178 @@ window.OMS = window.OMS || {};
     if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor' });
   }
 
+  function ensureCasinoStyle() {
+    if (document.getElementById('casino-style')) return;
+    const style = document.createElement('style');
+    style.id = 'casino-style';
+    style.textContent = `
+      @keyframes casinoBlink { 0%,100%{opacity:1} 50%{opacity:0.7} }
+      .slot-reel-spinning { animation: reelBlur 0.1s linear infinite; }
+      @keyframes reelBlur { 0%,100%{filter:blur(0)} 50%{filter:blur(2px)} }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function playCasinoSound(type) {
+    const A = OMS.audio;
+    if (!A.ctx || !A.masterGain) return;
+    const t = A.ctx.currentTime;
+    if (type === 'spin') {
+      const buf = A.ctx.createBuffer(1, A.ctx.sampleRate * 0.04, A.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 300);
+      const src = A.ctx.createBufferSource();
+      src.buffer = buf;
+      const g = A.ctx.createGain();
+      g.gain.setValueAtTime(0.15, t);
+      src.connect(g);
+      g.connect(A.masterGain);
+      src.start();
+      return;
+    }
+    if (type === 'stop') {
+      const o = A.ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(180, t);
+      o.frequency.linearRampToValueAtTime(80, t + 0.06);
+      const g = A.ctx.createGain();
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.08);
+      o.connect(g);
+      g.connect(A.masterGain);
+      o.start();
+      o.stop(t + 0.08);
+      return;
+    }
+    if (type === 'coin') {
+      [1047, 1319, 1568].forEach((f, i) => {
+        const o = A.ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f, t + i * 0.08);
+        const g = A.ctx.createGain();
+        g.gain.setValueAtTime(0.12, t + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.2);
+        o.connect(g);
+        g.connect(A.masterGain);
+        o.start();
+        o.stop(t + i * 0.08 + 0.2);
+      });
+      return;
+    }
+    if (type === 'jackpot') {
+      const melody = [523, 659, 784, 659, 784, 1047, 784, 1047, 1319];
+      melody.forEach((f, i) => {
+        const o = A.ctx.createOscillator();
+        o.type = i % 2 === 0 ? 'sine' : 'triangle';
+        o.frequency.setValueAtTime(f, t + i * 0.12);
+        const g = A.ctx.createGain();
+        g.gain.setValueAtTime(0.1, t + i * 0.12);
+        g.gain.linearRampToValueAtTime(0, t + i * 0.12 + 0.15);
+        o.connect(g);
+        g.connect(A.masterGain);
+        o.start();
+        o.stop(t + i * 0.12 + 0.15);
+      });
+      return;
+    }
+    if (type === 'lose') {
+      const o = A.ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(200, t);
+      o.frequency.linearRampToValueAtTime(80, t + 0.4);
+      const g = A.ctx.createGain();
+      g.gain.setValueAtTime(0.08, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.4);
+      o.connect(g);
+      g.connect(A.masterGain);
+      o.start();
+      o.stop(t + 0.4);
+    }
+  }
+
+  function spinSlots({ spinBtn, reels, resultEl, accentColor }) {
+    if (!spinBtn || spinBtn.disabled || reels.length !== 3) return;
+    spinBtn.disabled = true;
+    spinBtn.textContent = '...';
+    if (resultEl) resultEl.textContent = '';
+
+    const intervals = reels.map((reel, idx) => setInterval(() => {
+      reel.classList.add('slot-reel-spinning');
+      reel.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+      playCasinoSound('spin');
+    }, 80 + idx * 15));
+
+    const roll = Math.random();
+    let final;
+    if (roll < 0.05) {
+      const s = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+      final = [s, s, s];
+    } else if (roll < 0.25) {
+      const s = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+      const other = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+      final = Math.random() < 0.5 ? [s, s, other] : [other, s, s];
+    } else {
+      let a;
+      let b;
+      let c;
+      do { a = slotSymbols[Math.floor(Math.random() * slotSymbols.length)]; } while (false);
+      do { b = slotSymbols[Math.floor(Math.random() * slotSymbols.length)]; } while (b === a);
+      do { c = slotSymbols[Math.floor(Math.random() * slotSymbols.length)]; } while (c === a || c === b);
+      final = [a, b, c];
+    }
+
+    reels.forEach((reel, idx) => {
+      setTimeout(() => {
+        clearInterval(intervals[idx]);
+        reel.classList.remove('slot-reel-spinning');
+        reel.textContent = final[idx];
+        playCasinoSound('stop');
+        if (idx !== 2) return;
+
+        setTimeout(() => {
+          const win = final[0] === final[1] && final[1] === final[2];
+          const twoMatch = final[0] === final[1] || final[1] === final[2];
+          if (win) {
+            if (resultEl) {
+              resultEl.style.color = accentColor;
+              resultEl.textContent = 'ДЖЕКПОТ! ТЫ ВЫИГРАЛ!';
+            }
+            playCasinoSound('jackpot');
+            OMS.effects.triggerExplosion();
+          } else if (twoMatch) {
+            if (resultEl) {
+              resultEl.style.color = '#fff';
+              resultEl.textContent = 'ПОЧТИ... ЕЩЁ РАЗ!';
+            }
+            playCasinoSound('coin');
+          } else {
+            if (resultEl) {
+              resultEl.style.color = 'rgba(255,255,255,0.4)';
+              resultEl.textContent = 'НЕ ПОВЕЗЛО. КРУТИ ЕЩЁ.';
+            }
+            playCasinoSound('lose');
+          }
+          spinBtn.disabled = false;
+          spinBtn.textContent = 'КРУТИТЬ!';
+        }, 300);
+      }, 900 + idx * 700);
+    });
+  }
+
   function leaveSponsorTrace(cell) {
     if (!cell) return;
-    const dot = document.createElement('span');
-    dot.className = 'sponsor-trace-dot';
-    cell.appendChild(dot);
-    setTimeout(() => dot.remove(), 950);
+    const star = document.createElement('div');
+    star.style.cssText = `
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-size:8px; color:#ffaa00; opacity:0.6; pointer-events:none; z-index:5;
+    `;
+    star.textContent = '★';
+    cell.appendChild(star);
+    sponsorTrail.push({ el: star, cell });
+    if (sponsorTrail.length > MAX_SPONSOR_TRAIL) {
+      const old = sponsorTrail.shift();
+      if (old && old.el && old.el.parentNode) old.el.parentNode.removeChild(old.el);
+    }
   }
 
   function injectSponsorCell() {
