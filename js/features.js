@@ -988,6 +988,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   OMS.features = {
     showCasinoAd,
+    beginSponsorQuestPlay,
     moveSponsorCell,
     resetSponsorQuest,
     showGodzilla,
