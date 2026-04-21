@@ -589,11 +589,7 @@ window.OMS = window.OMS || {};
         setTimeout(OMS.effects.hideTooltip, 700);
       }
 
-      const now = Date.now();
-      if (now - (S.sponsorQuest.lastTapAt || 0) <= 420) {
-        startSponsorQuest();
-      }
-      S.sponsorQuest.lastTapAt = now;
+      startSponsorQuest();
       return;
     }
     const reversedX = dx * -1;
