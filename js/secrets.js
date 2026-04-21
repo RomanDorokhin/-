@@ -6,9 +6,7 @@ window.OMS = window.OMS || {};
   const S = OMS.state;
   const R = OMS.refs;
   const registry = new Map(C.SECRET_DEFS.map((def) => [def.id, def]));
-  const HINT_INTERVAL_MS = 16000;
   const HINT_COOLDOWN_MS = 9000;
-  let hintTimer = 0;
   let statusResetTimer = 0;
 
   function readProgress() {
@@ -41,13 +39,12 @@ window.OMS = window.OMS || {};
   }
 
   function updateCounter() {
-    const total = getTotalSecrets();
     const unlocked = getUnlockedCount();
     if (R.secretCounter) {
-      R.secretCounter.textContent = `СЕКРЕТЫ: ${unlocked}/${total}`;
+      R.secretCounter.textContent = `СЕКРЕТЫ: ${unlocked}`;
     }
     if (R.backpackProgress) {
-      R.backpackProgress.textContent = `НАЙДЕНО: ${unlocked} ИЗ ${total}`;
+      R.backpackProgress.textContent = `НАЙДЕНО: ${unlocked}`;
     }
   }
 
@@ -68,28 +65,35 @@ window.OMS = window.OMS || {};
   function renderBackpack() {
     if (!R.backpackGrid) return;
     R.backpackGrid.innerHTML = '';
-    C.SECRET_DEFS.forEach((def) => {
-      const unlocked = S.unlockedSecrets.has(def.id);
+    const unlockedDefs = C.SECRET_DEFS.filter((def) => S.unlockedSecrets.has(def.id));
+
+    if (!unlockedDefs.length) {
+      const emptyCard = document.createElement('article');
+      emptyCard.className = 'secret-card locked';
+      emptyCard.innerHTML = `
+        <h4 class="secret-card-title">ПУСТО</h4>
+        <p class="secret-card-description">Ты пока ничего не нашел. Коллекция откроется по мере открытий.</p>
+      `;
+      R.backpackGrid.appendChild(emptyCard);
+      return;
+    }
+
+    unlockedDefs.forEach((def) => {
       const card = document.createElement('article');
-      card.className = `secret-card ${unlocked ? 'unlocked' : 'locked'}`;
+      card.className = 'secret-card unlocked';
 
       const title = document.createElement('h4');
       title.className = 'secret-card-title';
-      title.textContent = unlocked ? def.title : '???';
-
-      const hint = document.createElement('p');
-      hint.className = 'secret-card-hint';
-      hint.textContent = `Подсказка: ${def.hint}`;
+      title.textContent = def.title;
 
       const description = document.createElement('p');
       description.className = 'secret-card-description';
-      description.textContent = unlocked ? def.description : 'Секрет еще не раскрыт.';
+      description.textContent = def.description;
 
       card.appendChild(title);
-      card.appendChild(hint);
       card.appendChild(description);
 
-      if (unlocked && def.category === 'interactive' && def.action) {
+      if (def.category === 'interactive' && def.action) {
         const actionBtn = document.createElement('button');
         actionBtn.className = 'secret-action-btn';
         actionBtn.type = 'button';
@@ -105,6 +109,7 @@ window.OMS = window.OMS || {};
   function flashStatusLine(text) {
     if (!R.statusLine || S.currentPhase < 1) return;
     clearTimeout(statusResetTimer);
+    S.statusHoldUntil = Date.now() + 2200;
     R.statusLine.textContent = text;
     R.statusLine.style.opacity = '1';
     statusResetTimer = setTimeout(() => {
@@ -121,32 +126,47 @@ window.OMS = window.OMS || {};
     flashStatusLine(text);
   }
 
-  function getContextHintRule() {
-    const unlocked = getUnlockedCount();
-    if (!S.introAccepted) return 'ПОДСКАЗКА: сначала запусти охоту на стартовом экране.';
-    if (S.currentPhase < 2) return 'ПОДСКАЗКА: движение запускает активный сеанс.';
-    if (unlocked === 0) return 'ПОДСКАЗКА: начни с первой ячейки в сетке.';
-    if (S.cellClickCount < 10) return 'ПОДСКАЗКА: тестируй разные каналы и ритм кликов.';
-    if (!S.unlockedSecrets.has('forbidden_button')) return 'ПОДСКАЗКА: запретная кнопка может быть частью маршрута.';
-    if (!S.unlockedSecrets.has('casino')) return 'ПОДСКАЗКА: среди каналов есть особый спонсорский след.';
-    if (!S.unlockedSecrets.has('konami')) return 'ПОДСКАЗКА: старые комбинации клавиш иногда работают.';
-    if (!S.unlockedSecrets.has('console_access')) return 'ПОДСКАЗКА: сервисный режим открывается отдельной клавишей.';
-    if (!S.unlockedSecrets.has('godzilla') && S.tokyoClicks > 0) return 'ПОДСКАЗКА: TOKYO реагирует на настойчивость.';
-    if (!S.unlockedSecrets.has('emergency_exit')) return 'ПОДСКАЗКА: аварийные горячие клавиши доступны в сеансе.';
-    return '';
-  }
-
-  function getNextHint() {
-    const contextual = getContextHintRule();
-    if (contextual) return contextual;
-    const next = C.SECRET_DEFS.find((def) => !S.unlockedSecrets.has(def.id));
-    if (!next) return 'ПОДСКАЗКА: ВСЕ СЕКРЕТЫ ИЗ ТЕКУЩЕЙ ВЕРСИИ НАЙДЕНЫ.';
-    return `ПОДСКАЗКА: ${next.hint}`;
+  function getNoiseHint() {
+    const unlockCount = getUnlockedCount();
+    const poolEarly = [
+      'ПОДСКАЗКА: иногда запрет — это указатель.',
+      'ПОДСКАЗКА: повтор одного и того же иногда что-то меняет.',
+      'ПОДСКАЗКА: не все сигналы находятся мышкой.',
+    ];
+    const poolMid = [
+      'ПОДСКАЗКА: часть маршрутов любит клавиши, а не клики.',
+      'ПОДСКАЗКА: странное поведение интерфейса — не всегда баг.',
+      'ПОДСКАЗКА: некоторые каналы реагируют только на настойчивость.',
+    ];
+    const poolLate = [
+      'ПОДСКАЗКА: ты уже близко. Ищи неочевидные комбинации.',
+      'ПОДСКАЗКА: сервисные символы иногда открывают второе дно.',
+      'ПОДСКАЗКА: пропущенные шаги обычно самые простые.',
+    ];
+    const poolDone = [
+      'ПОДСКАЗКА: в этой версии ты собрал всё, что доступно.',
+    ];
+    const pool = unlockCount >= getTotalSecrets()
+      ? poolDone
+      : unlockCount < 2
+      ? poolEarly
+      : unlockCount < 6
+      ? poolMid
+      : poolLate;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   function showHint() {
     if (S.currentPhase < 1) return;
-    queueHint(getNextHint());
+    queueHint(getNoiseHint());
+  }
+
+  function registerNoiseAction() {
+    if (S.currentPhase < 2) return;
+    S.noiseActionCount += 1;
+    if (S.noiseActionCount < 3) return;
+    S.noiseActionCount = 0;
+    showHint();
   }
 
   function unlockSecret(secretId, meta = {}) {
@@ -224,9 +244,6 @@ window.OMS = window.OMS || {};
     updateBackpackBadge();
     renderBackpack();
     bindUi();
-    clearInterval(hintTimer);
-    hintTimer = setInterval(showHint, HINT_INTERVAL_MS);
-    setTimeout(showHint, 1200);
   }
 
   OMS.secrets = {
@@ -236,6 +253,7 @@ window.OMS = window.OMS || {};
       return S.unlockedSecrets.has(secretId);
     },
     showHint,
+    registerNoiseAction,
     openBackpack,
     closeBackpack,
     toggleBackpack,

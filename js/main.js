@@ -73,6 +73,7 @@
 
   function maybeStatusPulse() {
     if (state.currentPhase < 1) return;
+    if (Date.now() < state.statusHoldUntil) return;
     const msgs = [
       'СВЯЗЬ УСТАНОВЛЕНА',
       'ВХОДЯЩИЙ СИГНАЛ',

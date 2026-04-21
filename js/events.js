@@ -81,6 +81,7 @@ window.OMS = window.OMS || {};
 
     document.addEventListener('contextmenu', e => {
       e.preventDefault();
+      if (OMS.secrets) OMS.secrets.markMeaninglessAction('contextmenu');
       const tip = document.createElement('div');
       tip.textContent = '// ЭТО НЕ ПОМОЖЕТ';
       tip.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(0,255,65,0.7);background:rgba(0,0,0,0.95);border:1px solid rgba(0,255,65,0.2);padding:6px 14px;pointer-events:none;z-index:400;letter-spacing:0.2em;`;
@@ -125,6 +126,7 @@ window.OMS = window.OMS || {};
       }
 
       if (e.key === ' ') {
+        if (OMS.secrets) OMS.secrets.markMeaninglessAction('space');
         const now = Date.now();
         if (now - S.lastSpace < 400) {
           S.flipped = !S.flipped;
@@ -147,6 +149,7 @@ window.OMS = window.OMS || {};
       }
 
       if (e.key === 'Enter' && S.currentPhase >= 1) {
+        if (OMS.secrets) OMS.secrets.markMeaninglessAction('enter_news');
         const pressNews = [
           'Блогер получил 5 лет за репост картинки',
           'Студента отчислили за пост во ВКонтакте',
