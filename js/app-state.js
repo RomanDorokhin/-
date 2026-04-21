@@ -244,6 +244,7 @@ window.OMS = window.OMS || {};
     lifetimeLimitReached: false,
     sponsorQuest: {
       active: false,
+      ready: false,
       score: 0,
       targetScore: 20,
       food: { x: 7, y: 2 },
@@ -255,6 +256,8 @@ window.OMS = window.OMS || {};
       intentY: 0,
       tickTimer: null,
       startTimer: null,
+      completeTimer: null,
+      statusTimer: null,
       speedMs: 320,
       lastTapAt: 0,
     },
@@ -310,7 +313,20 @@ window.OMS = window.OMS || {};
     ctx: null,
     masterGain: null,
     droneOsc: null,
+    droneGain: null,
+    noiseSource: null,
+    noiseGain: null,
     soundMode: OMS.constants.SOUND_MODES[Math.floor(Math.random() * OMS.constants.SOUND_MODES.length)],
+    sponsorMusic: {
+      active: false,
+      stepTimer: null,
+      padOsc: null,
+      chordOsc: null,
+      bellOsc: null,
+      gain: null,
+      filter: null,
+      stepIndex: 0,
+    },
   };
 
   OMS.render = {

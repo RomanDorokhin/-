@@ -81,15 +81,19 @@ window.OMS = window.OMS || {};
       cell.addEventListener('mouseenter', () => {
         S.activeCells.add(i);
         cell.classList.add('active');
-        OMS.effects.showTooltip(`CHANNEL: ${C.LOCATIONS[i % C.LOCATIONS.length]}`, cell);
-        OMS.audioApi.modulateDrone(100 + i * 8);
+        if (!S.sponsorQuest.active) {
+          OMS.effects.showTooltip(`CHANNEL: ${C.LOCATIONS[i % C.LOCATIONS.length]}`, cell);
+          OMS.audioApi.modulateDrone(100 + i * 8);
+        }
       });
 
       cell.addEventListener('mouseleave', () => {
         cell.classList.remove('active');
         S.activeCells.delete(i);
-        OMS.effects.hideTooltip();
-        OMS.audioApi.modulateDrone(55);
+        if (!S.sponsorQuest.active) {
+          OMS.effects.hideTooltip();
+          OMS.audioApi.modulateDrone(55);
+        }
       });
 
       R.noiseGrid.appendChild(cell);

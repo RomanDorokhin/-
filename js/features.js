@@ -52,6 +52,75 @@ window.OMS = window.OMS || {};
     document.body.classList.remove('snake-mode');
   }
 
+  function getSnakeBrightness(score = S.sponsorQuest.score) {
+    const ratio = Math.max(0, Math.min(1, score / S.sponsorQuest.targetScore));
+    return 110 + Math.round(ratio * 145);
+  }
+
+  function applySnakeCellVisual(cell, tone, isHead) {
+    if (!cell) return;
+    const front = cell.querySelector('.cell-front');
+    if (!front) return;
+    const glow = isHead ? 0.95 : 0.72;
+    const bgAlpha = isHead ? 0.34 : 0.22;
+    const borderAlpha = isHead ? 0.98 : 0.82;
+    front.style.borderColor = `rgba(${tone}, ${tone}, ${tone}, ${borderAlpha})`;
+    front.style.background = `rgba(${tone}, ${tone}, ${tone}, ${bgAlpha})`;
+    front.style.boxShadow = isHead
+      ? `0 0 22px rgba(${tone}, ${tone}, ${tone}, ${glow}), inset 0 0 28px rgba(255,255,255,0.28)`
+      : `0 0 12px rgba(${tone}, ${tone}, ${tone}, 0.34), inset 0 0 18px rgba(${tone}, ${tone}, ${tone}, 0.16)`;
+  }
+
+  function clearSnakeCellVisual(cell) {
+    if (!cell) return;
+    const front = cell.querySelector('.cell-front');
+    if (!front) return;
+    front.style.borderColor = '';
+    front.style.background = '';
+    front.style.boxShadow = '';
+  }
+
+  function setSnakeStatus(text, holdMs = 1200) {
+    if (!R.statusLine || S.currentPhase < 1) return;
+    R.statusLine.textContent = text;
+    R.statusLine.style.opacity = '1';
+    clearTimeout(S.sponsorQuest.statusTimer);
+    S.sponsorQuest.statusTimer = setTimeout(() => {
+      R.statusLine.style.opacity = '0';
+    }, holdMs);
+  }
+
+  function canQueueSnakeTurn(nextX, nextY) {
+    if (nextX === 0 && nextY === 0) return false;
+    if (!S.sponsorQuest.ready) return true;
+    const bodyLen = S.sponsorQuest.snakeTail.length;
+    if (bodyLen <= 1) return true;
+    return !(
+      nextX === -S.sponsorQuest.directionX &&
+      nextY === -S.sponsorQuest.directionY
+    );
+  }
+
+  function clearSponsorQuestWarning() {
+    const warning = document.getElementById('sponsor-quest-warning');
+    if (warning) warning.remove();
+  }
+
+  function finalizeSponsorSecret() {
+    const cells = document.querySelectorAll('.noise-cell');
+    cells.forEach((cell) => {
+      cell.classList.add('snake-complete');
+    });
+    OMS.audioApi.playSnakeSuccess();
+    setSnakeStatus('ВЫ РАСКРЫЛИ СЕКРЕТ. УРА.', 2400);
+    clearTimeout(S.sponsorQuest.completeTimer);
+    S.sponsorQuest.completeTimer = setTimeout(() => {
+      resetSponsorQuest('СЕКРЕТ РАСКРЫТ: ЗМЕЙКА ДОБАВЛЕНА В КОЛЛЕКЦИЮ');
+      cells.forEach((cell) => cell.classList.remove('snake-complete'));
+      if (OMS.secrets) OMS.secrets.unlockSecret('sponsor_snake', { source: 'sponsor_snake_quest' });
+    }, 2200);
+  }
+
   function ensureSponsorQuestUi() {
     let panel = document.getElementById('sponsor-quest-panel');
     if (panel) return panel;
@@ -90,7 +159,9 @@ window.OMS = window.OMS || {};
     }
     ensureSponsorQuestUi();
     const scoreEl = document.getElementById('sponsor-quest-score');
-    if (scoreEl) scoreEl.textContent = `ОЧКИ: ${S.sponsorQuest.score} / ${S.sponsorQuest.targetScore}`;
+    if (scoreEl) {
+      scoreEl.textContent = `ДОБЫЧА: ${S.sponsorQuest.score} / ${S.sponsorQuest.targetScore} // ДЛИНА: ${S.sponsorQuest.snakeTail.length}`;
+    }
   }
 
   function paintQuestTarget(cells) {
@@ -112,7 +183,12 @@ window.OMS = window.OMS || {};
   }
 
   function resetSponsorQuest(reason = '') {
+    clearTimeout(S.sponsorQuest.startTimer);
+    clearTimeout(S.sponsorQuest.completeTimer);
+    clearTimeout(S.sponsorQuest.statusTimer);
+    clearSponsorQuestWarning();
     S.sponsorQuest.active = false;
+    S.sponsorQuest.ready = false;
     S.sponsorQuest.score = 0;
     S.sponsorQuest.snakeTail = [];
     S.sponsorQuest.directionX = 0;
@@ -126,7 +202,8 @@ window.OMS = window.OMS || {};
     const cells = document.querySelectorAll('.noise-cell');
     cells.forEach((cell) => clearQuestCellMark(cell));
     cells.forEach((cell) => {
-      cell.classList.remove('sponsor-tail', 'sponsor-head');
+      cell.classList.remove('sponsor-tail', 'sponsor-head', 'snake-complete');
+      clearSnakeCellVisual(cell);
       clearSponsorClickBindings(cell);
     });
     const baseIdx = 42;
@@ -139,6 +216,7 @@ window.OMS = window.OMS || {};
     }
     S.sponsorGridX = 2;
     S.sponsorGridY = 4;
+    OMS.audioApi.stopSnakeMode();
     updateSponsorQuestUi();
     if (reason && R.statusLine && S.currentPhase >= 1) {
       R.statusLine.textContent = reason;
@@ -150,17 +228,19 @@ window.OMS = window.OMS || {};
   function startSponsorQuest() {
     const cells = document.querySelectorAll('.noise-cell');
     if (!cells.length || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    clearSponsorQuestWarning();
     if (S.sponsorQuest.tickTimer) {
       clearInterval(S.sponsorQuest.tickTimer);
       S.sponsorQuest.tickTimer = null;
     }
     S.sponsorQuest.active = true;
+    S.sponsorQuest.ready = false;
     S.sponsorQuest.score = 0;
     S.sponsorQuest.snakeTail = [S.sponsorGridY * 10 + S.sponsorGridX];
     S.sponsorQuest.directionX = 0;
-    S.sponsorQuest.directionY = -1;
+    S.sponsorQuest.directionY = 1;
     S.sponsorQuest.intentX = 0;
-    S.sponsorQuest.intentY = -1;
+    S.sponsorQuest.intentY = 1;
     S.sponsorQuest.lastStepAt = Date.now();
     const forbidden = new Set([S.sponsorGridY * 10 + S.sponsorGridX, 42]);
     let ox = 0;
@@ -183,45 +263,62 @@ window.OMS = window.OMS || {};
     warning.id = 'sponsor-quest-warning';
     warning.style.cssText = `
       position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-      z-index:260;background:rgba(0,0,0,0.94);border:1px solid rgba(0,255,65,0.45);
-      box-shadow:0 0 30px rgba(0,255,65,0.22);padding:18px 26px;text-align:center;
-      font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;color:#00ff41;
+      z-index:260;background:rgba(0,0,0,0.96);border:1px solid rgba(235,245,255,0.62);
+      box-shadow:0 0 45px rgba(180,220,255,0.18);padding:28px 36px;text-align:center;
+      font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;color:#e9f6ff;
+      min-width:min(92vw, 620px);
     `;
     warning.innerHTML = `
-      <div style="font-size:16px;">ВЫ ВОШЛИ В СЕКРЕТНЫЙ РЕЖИМ</div>
-      <div style="font-size:12px;margin-top:8px;opacity:0.85;">ЗМЕЙКА: НАБЕРИ 20 ОЧКОВ</div>
-      <div style="font-size:11px;margin-top:10px;opacity:0.65;">УПРАВЛЕНИЕ РЕВЕРСИВНОЕ</div>
+      <div style="font-size:clamp(28px,4vw,44px);line-height:1.1;font-family:'VT323',monospace;letter-spacing:0.12em;">
+        СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА
+      </div>
+      <div style="font-size:clamp(14px,1.8vw,20px);margin-top:12px;opacity:0.92;line-height:1.6;">
+        СОБЕРИ 20 ДОБЫЧИ.<br>ПОСЛЕ КАЖДОЙ ДОБЫЧИ ЗМЕЙКА РАСТЁТ И СТАНОВИТСЯ СВЕТЛЕЕ.
+      </div>
+      <div style="font-size:clamp(12px,1.5vw,17px);margin-top:14px;opacity:0.72;line-height:1.9;">
+        УПРАВЛЕНИЕ ИНВЕРСНОЕ И СТРОГОЕ:<br>
+        ← ВЕДЁТ ВПРАВО // → ВЕДЁТ ВЛЕВО // ↑ ВЕДЁТ ВНИЗ // ↓ ВЕДЁТ ВВЕРХ
+      </div>
+      <div style="font-size:clamp(11px,1.4vw,15px);margin-top:14px;opacity:0.48;letter-spacing:0.16em;">
+        СЕЙЧАС РЕЖИМ ЗАПУСТИТСЯ
+      </div>
     `;
     document.body.appendChild(warning);
-    setTimeout(() => {
-      if (warning.parentNode) warning.parentNode.removeChild(warning);
+    OMS.audioApi.startSnakeMode();
+    S.sponsorQuest.startTimer = setTimeout(() => {
+      clearSponsorQuestWarning();
+      S.sponsorQuest.ready = true;
       S.sponsorQuest.tickTimer = setInterval(() => {
         tickSnake();
       }, S.sponsorQuest.speedMs || 300);
-    }, 1200);
-    if (R.statusLine) {
-      R.statusLine.textContent = 'СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА // СОБЕРИ 20 ОЧКОВ';
-      R.statusLine.style.opacity = '1';
-      setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2600);
-    }
+      OMS.audioApi.playSnakeTurnCue();
+      setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
+    }, 2600);
+    setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ АКТИВИРУЕТСЯ...', 2400);
   }
 
   function renderSnake(cells) {
     const all = cells || document.querySelectorAll('.noise-cell');
     all.forEach((cell) => {
       cell.classList.remove('sponsor', 'sponsor-head', 'sponsor-tail');
+      clearSnakeCellVisual(cell);
     });
     const body = S.sponsorQuest.snakeTail;
+    const tone = getSnakeBrightness();
+    const headTone = Math.min(255, tone + 20);
     body.forEach((idx, i) => {
       const cell = all[idx];
       if (!cell) return;
       if (i === body.length - 1) {
         cell.classList.add('sponsor-head');
+        applySnakeCellVisual(cell, headTone, true);
       } else {
         cell.classList.add('sponsor-tail');
+        const tailTone = Math.max(95, tone - Math.max(0, body.length - i - 1) * 6);
+        applySnakeCellVisual(cell, tailTone, false);
       }
       const lbl = cell.querySelector('.cell-label');
-      if (lbl) lbl.textContent = i === body.length - 1 ? 'HEAD' : 'TAIL';
+      if (lbl) lbl.textContent = i === body.length - 1 ? 'HEAD' : `${i + 1}`;
     });
   }
 
@@ -240,6 +337,7 @@ window.OMS = window.OMS || {};
 
   function tickSnake() {
     if (!S.sponsorQuest.active || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    if (!S.sponsorQuest.ready) return;
     const cells = document.querySelectorAll('.noise-cell');
     if (!cells.length) return;
 
@@ -260,12 +358,14 @@ window.OMS = window.OMS || {};
     const ny = hy + S.sponsorQuest.directionY;
 
     if (nx < 0 || nx > 9 || ny < 0 || ny > 9) {
+      OMS.audioApi.playSnakeFail();
       resetSponsorQuest('КРАЙ СЕТКИ: ОЧКИ СБРОШЕНЫ');
       return;
     }
 
     const nextIdx = ny * 10 + nx;
     if (S.sponsorQuest.snakeTail.includes(nextIdx)) {
+      OMS.audioApi.playSnakeFail();
       resetSponsorQuest('КВЕСТ СОРВАН: ТЫ ВРЕЗАЛСЯ В ХВОСТ');
       return;
     }
@@ -280,14 +380,12 @@ window.OMS = window.OMS || {};
     const hitFood = nx === S.sponsorQuest.objective.x && ny === S.sponsorQuest.objective.y;
     if (hitFood) {
       S.sponsorQuest.score += 1;
-      if (R.statusLine) {
-        R.statusLine.textContent = `ЗМЕЙКА: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`;
-        R.statusLine.style.opacity = '1';
-        setTimeout(() => { R.statusLine.style.opacity = '0'; }, 500);
-      }
+      OMS.audioApi.playSnakeEat(Math.max(0, S.sponsorQuest.score - 1) / S.sponsorQuest.targetScore);
+      setSnakeStatus(`ДОБЫЧА ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore} // ЗМЕЙКА РАСТЁТ`, 900);
       if (S.sponsorQuest.score >= S.sponsorQuest.targetScore) {
-        resetSponsorQuest('КВЕСТ ВЫПОЛНЕН: СЕКРЕТ ЗАСЧИТАН');
-        if (OMS.secrets) OMS.secrets.unlockSecret('sponsor_snake', { source: 'sponsor_snake_quest' });
+        renderSnake(cells);
+        updateSponsorQuestUi();
+        finalizeSponsorSecret();
         return;
       }
       spawnSnakeFood(cells);
@@ -564,6 +662,7 @@ window.OMS = window.OMS || {};
 
   function moveSponsorCell(dx, dy) {
     if (S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    OMS.audioApi.initAudio();
     const cells = document.querySelectorAll('.noise-cell');
     if (!cells.length) return;
 
@@ -592,11 +691,12 @@ window.OMS = window.OMS || {};
       startSponsorQuest();
       return;
     }
-    const reversedX = dx * -1;
-    const reversedY = dy * -1;
-    if (reversedX === 0 && reversedY === 0) return;
-    S.sponsorQuest.intentX = reversedX;
-    S.sponsorQuest.intentY = reversedY;
+    if (!S.sponsorQuest.ready) return;
+    if (dx === 0 && dy === 0) return;
+    if (!canQueueSnakeTurn(dx, dy)) return;
+    S.sponsorQuest.intentX = dx;
+    S.sponsorQuest.intentY = dy;
+    OMS.audioApi.playSnakeTurnCue();
   }
 
   function showGodzilla() {

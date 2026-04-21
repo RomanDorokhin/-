@@ -210,20 +210,20 @@ body.snake-mode #visit-badge,
 body.snake-mode #konami-hint,
 body.snake-mode #phase3-bottom,
 body.snake-mode #secrets-hud {
-  opacity: 0.08 !important;
+  opacity: 0.03 !important;
   pointer-events: none !important;
 }
 
 body.snake-mode #noise-grid {
-  transform: scale(1.08);
+  transform: scale(1.04);
   box-shadow:
-    0 0 35px rgba(0, 255, 65, 0.25),
-    0 0 90px rgba(0, 130, 255, 0.18);
+    0 0 18px rgba(180, 220, 255, 0.12),
+    0 0 42px rgba(90, 140, 255, 0.08);
 }
 
 body.snake-mode .noise-cell {
-  border-color: rgba(40, 160, 255, 0.28);
-  background: rgba(14, 44, 96, 0.42);
+  border-color: rgba(180, 220, 255, 0.18);
+  background: rgba(14, 26, 44, 0.28);
 }
 
 .noise-cell.sponsor-head .cell-front {
@@ -234,6 +234,43 @@ body.snake-mode .noise-cell {
 .noise-cell.sponsor-tail .cell-front {
   border-color: rgba(0, 200, 140, 0.6) !important;
   box-shadow: inset 0 0 14px rgba(0, 200, 140, 0.2);
+}
+
+body.snake-mode .noise-cell:hover .cell-front::after {
+  opacity: 0.08;
+  animation: none;
+}
+
+body.snake-mode .noise-cell.active .cell-front {
+  border-color: rgba(200, 230, 255, 0.22);
+  box-shadow: 0 0 4px rgba(200, 230, 255, 0.1);
+}
+
+body.snake-mode .cell-label {
+  opacity: 0.28;
+}
+
+.quest-target {
+  animation: snakeTargetPulse 1.4s ease-in-out infinite;
+}
+
+.noise-cell.snake-complete .cell-front {
+  border-color: rgba(255,255,255,0.95) !important;
+  background: rgba(255,255,255,0.28) !important;
+  box-shadow:
+    0 0 18px rgba(255,255,255,0.85),
+    inset 0 0 22px rgba(255,255,255,0.32) !important;
+}
+
+@keyframes snakeTargetPulse {
+  0%, 100% {
+    transform: scale(0.88);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
 }
 
 .section-title {
