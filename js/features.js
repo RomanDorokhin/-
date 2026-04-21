@@ -388,7 +388,7 @@ window.OMS = window.OMS || {};
       }
       if (S.sponsorQuest.score >= S.sponsorQuest.targetScore) {
         resetSponsorQuest('КВЕСТ ВЫПОЛНЕН');
-        if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor_snake_quest' });
+        if (OMS.secrets) OMS.secrets.unlockSecret('sponsor_snake', { source: 'sponsor_snake_quest' });
       } else {
         let ox = 0;
         let oy = 0;
