@@ -1,120 +1,262 @@
-// === ГЛАВНЫЙ ЦИКЛ И STATE MACHINE v5 ===
+(() => {
+  const OMS = window.OMS;
+  const refs = OMS.refs;
+  const state = OMS.state;
+  const visit = OMS.visit;
+  const constants = OMS.constants;
+  const helpers = OMS.helpers;
 
-function startGame() {
-  try {
-    document.getElementById('ov').style.display = 'none';
-    P = mkUnit(true);
-    E = mkUnit(false);
-    items = []; hazards = []; explosions = []; fx = []; graves = [];
-    itemT = 0; hazT = 8000; aiT = 0;
-    roundNum = 1;
-    bankedSoldiers = 0;
-    winner = null;
-    state = S.ECONOMY;
-    econTimer = ECON_DURATION;
-    stateTimer = 0;
-    resetNukes();
-    scheduleNukes();
-    for (let i = 0; i < 18; i++) spawnItem();
-    spawnHaz(); spawnHaz();
-    running = true;
-    crashed = false;
-  } catch (err) {
-    alert('startGame error: ' + err.message);
-  }
-}
+  function updateSessionTick() {
+    state.sessionSeconds += 1;
+    refs.progressTop.style.width = `${Math.min(state.sessionSeconds / constants.SESSION_LIMIT_SECONDS * 100, 100)}%`;
+    refs.sessionTime.innerHTML = `SESSION<br>${helpers.formatSession(state.sessionSeconds)}`;
 
-function startNextRound() {
-  roundNum++;
-  // P.res и P.soldiers уже обнулены в initPlacement — они превратились в армию
-  // bankedSoldiers сохраняется (перенос излишка)
-  items = []; hazards = []; explosions = []; fx = [];
-  for (let i = 0; i < 18; i++) spawnItem();
-  spawnHaz(); spawnHaz();
-  if (P) {
-    P.col = 2; P.row = ROWS >> 1; P.mode = 'base';
-    P.tail = []; P.carry = 0; P.alive = true; P.hp = 2;
-    P.vdc = 0; P.vdr = 0; P.snT = 0; P.mvT = 0;
-  }
-  if (E) {
-    E.col = TC - 3; E.row = ROWS >> 1; E.mode = 'base';
-    E.tail = []; E.carry = 0; E.alive = true; E.hp = 2;
-    E.vdc = 0; E.vdr = 0; E.snT = 0; E.mvT = 0;
-  }
-  resetNukes();
-  scheduleNukes();
-  state = S.ECONOMY;
-  econTimer = ECON_DURATION;
-  winner = null;
-}
-
-// === ОБНОВЛЕНИЕ ПО СОСТОЯНИЯМ ===
-
-function updateEconomy(dt) {
-  graves = graves.filter(g => { g.life -= dt; return g.life > 0; });
-  itemT -= dt; if (itemT <= 0 && items.length < 14) { spawnItem(); itemT = ri(1800, 3200); }
-  hazT -= dt; if (hazT <= 0) { spawnHaz(); hazT = ri(10000, 16000); }
-  updateHaz(dt);
-  updateNukes(dt);
-  handleBaseKeys();
-  moveUnit(P, dt);
-  moveUnit(E, dt);
-  updateAI(dt);
-  checkColl();
-
-  econTimer -= dt;
-  if (econTimer <= 0) {
-    // Если в поле с рюкзаком — засчитываем его (иначе всё сгорит)
-    if (P && P.mode === 'snake' && P.carry > 0) { P.res += P.carry; P.carry = 0; }
-    if (E && E.mode === 'snake' && E.carry > 0) { E.res += E.carry; E.carry = 0; }
-    initPlacement();
-    state = S.PLACEMENT;
-    addFx(CW / 2, 50, '▶ РАССТАНОВКА', '#FFD700', 1800);
-  }
-}
-
-function update(dt) {
-  if (!P || !E) return;
-  explosions = explosions.filter(e => { e.l -= dt; return e.l > 0; });
-
-  switch (state) {
-    case S.ECONOMY:   updateEconomy(dt); break;
-    case S.PLACEMENT: updatePlacement(dt); break;
-    case S.NAVAL:     updateNaval(dt); break;
-    case S.ROUND_END:
-      stateTimer -= dt;
-      if (stateTimer <= 0) {
-        if (winner === 'enemy') startGame();
-        else startNextRound();
+    if (state.currentPhase >= 1) {
+      state.countdownSec -= 1;
+      if (state.countdownSec <= 0) {
+        state.countdownSec = constants.DAY_SECONDS - 1;
+        OMS.effects.triggerGlitch(1800);
+        setTimeout(() => OMS.phases.showCatPhase(), 1000);
       }
-      break;
-  }
-}
+      refs.countdown.textContent = `СЕАНС ИСТЕКАЕТ: ${helpers.formatTime(state.countdownSec)}`;
+    }
 
-function loop(ts = 0) {
-  if (crashed) return;
-  try {
-    const dt = last < 0 ? 0 : Math.min(ts - last, 80); last = ts;
-    if (running) update(dt);
-    render();
-  } catch (err) {
-    crashed = true;
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = '#FF4444'; ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'left';
-    ctx.fillText('ERROR: ' + err.message, 20, 40);
-    const stack = (err.stack || '').split('\n').slice(0, 8);
-    ctx.fillStyle = '#FFAA44'; ctx.font = '10px Courier New';
-    stack.forEach((line, i) => ctx.fillText(line.substring(0, 80), 20, 70 + i * 14));
-    return;
+    if (state.currentPhase === 2 && state.sessionSeconds === constants.SESSION_LIMIT_SECONDS) {
+      OMS.phases.goToPhase3Gameover();
+    }
   }
-  requestAnimationFrame(loop);
-}
 
-window.addEventListener('DOMContentLoaded', () => {
-  canvas = document.getElementById('c');
-  ctx = canvas.getContext('2d');
-  canvas.width = CW;
-  canvas.height = CH;
-  setupInput();
-  requestAnimationFrame(loop);
-});
+  function updatePresence() {
+    if (state.currentPhase < 2) return;
+    const drift = Math.floor(Math.random() * 40) - 15;
+    if (state.basePresence === undefined) {
+      state.basePresence = 1000 + Math.floor(Math.random() * 337);
+      state.presenceVal = state.basePresence;
+    }
+    state.presenceVal = Math.max(800, state.basePresence + Math.floor(state.sessionSeconds * 1.5) + drift);
+    refs.presenceCounter.textContent = state.presenceVal.toLocaleString('ru');
+  }
+
+  function updateIdle() {
+    const idleSeconds = (Date.now() - state.lastActivity) / 1000;
+    if (idleSeconds > 15 && state.currentPhase >= 1 && !state.idleShowing) {
+      state.idleShowing = true;
+      refs.idleMsg.style.opacity = '1';
+    } else if (idleSeconds < 2 && state.idleShowing) {
+      state.idleShowing = false;
+      refs.idleMsg.style.opacity = '0';
+    }
+  }
+
+  function updateSeenProgress() {
+    if (state.currentPhase !== 2) return;
+    const idle = (Date.now() - state.lastActivity) / 1000;
+    if (idle < 30 && !document.hidden) {
+      state.activeSeconds = Math.min(state.activeSeconds + 1, constants.TOTAL_NEEDED_SECONDS);
+      try { localStorage.setItem('oms_active', String(state.activeSeconds)); } catch (e) {}
+    }
+    state.seenPct = helpers.getSeenPct();
+  }
+
+  function maybeRandomGridPulse() {
+    if (state.currentPhase !== 2) return;
+    const cells = refs.noiseGrid.querySelectorAll('.noise-cell');
+    if (!cells.length) return;
+    const randomCell = Math.floor(Math.random() * constants.GRID_COUNT);
+    const cell = cells[randomCell];
+    if (cell && !state.activeCells.has(randomCell)) {
+      cell.style.background = 'rgba(0,255,65,0.15)';
+      setTimeout(() => { cell.style.background = ''; }, 200);
+    }
+  }
+
+  function maybeStatusPulse() {
+    if (state.currentPhase < 1) return;
+    const msgs = [
+      'СВЯЗЬ УСТАНОВЛЕНА',
+      'ВХОДЯЩИЙ СИГНАЛ',
+      'ДАННЫЕ ПОЛУЧЕНЫ',
+      'АУТЕНТИФИКАЦИЯ',
+      'ШИФРОВАНИЕ...',
+      'УЗЕЛ НАЙДЕН',
+      'УТЕЧКА ПАМЯТИ',
+      'АНОМАЛИЯ ОБНАРУЖЕНА',
+    ];
+    refs.statusLine.textContent = `SYSTEM: ${msgs[Math.floor(Math.random() * msgs.length)]}`;
+    refs.statusLine.style.opacity = '1';
+    setTimeout(() => { refs.statusLine.style.opacity = '0'; }, 2000);
+  }
+
+  function initVisitData() {
+    try {
+      const saved = localStorage.getItem('oms_v2');
+      if (saved) visit.data = JSON.parse(saved);
+    } catch (e) {}
+    visit.data.count += 1;
+    try { localStorage.setItem('oms_v2', JSON.stringify(visit.data)); } catch (e) {}
+  }
+
+  function initPersistentState() {
+    try {
+      state.catchCount = parseInt(localStorage.getItem('oms_catch') || '0', 10);
+    } catch (e) {}
+    try {
+      const savedActive = parseInt(localStorage.getItem('oms_active') || '0', 10);
+      state.activeSeconds = Number.isFinite(savedActive) ? savedActive : 0;
+      if (state.activeSeconds > 0) state.seenPct = helpers.getSeenPct();
+    } catch (e) {}
+    try {
+      const savedVol = localStorage.getItem('oms_vol');
+      if (savedVol !== null) {
+        refs.volSlider.value = savedVol;
+        state.currentVolume = parseInt(savedVol, 10) / 100;
+      }
+    } catch (e) {}
+  }
+
+  function bindGlobalVisibilityHandlers() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        cancelAnimationFrame(state.rafId);
+        if (OMS.audio.ctx && !state.isMuted) {
+          try { OMS.audio.ctx.suspend(); } catch (e) {}
+        }
+      } else {
+        state.rafId = requestAnimationFrame(OMS.visuals.renderFrame);
+        if (OMS.audio.ctx && !state.isMuted) {
+          try { OMS.audio.ctx.resume(); } catch (e) {}
+        }
+      }
+    });
+  }
+
+  function bindResize() {
+    window.addEventListener('resize', () => {
+      OMS.visuals.resizeCanvas();
+      if (state.currentPhase === 2) OMS.phases.positionEscapeButton();
+    });
+  }
+
+  function bindBeforeUnload() {
+    window.addEventListener('beforeunload', () => {
+      visit.data.totalSeconds += state.sessionSeconds;
+      try { localStorage.setItem('oms_v2', JSON.stringify(visit.data)); } catch (e) {}
+      if (window._bcChannel) {
+        try { window._bcChannel.close(); } catch (e) {}
+      }
+    });
+  }
+
+  function initBroadcastChannel() {
+    try {
+      const bc = new BroadcastChannel('oms_tabs');
+      bc.postMessage({ type: 'join', ts: Date.now() });
+      bc.onmessage = (event) => {
+        if (event.data.type === 'join' && state.currentPhase >= 1) {
+          OMS.effects.triggerGlitch(450);
+          refs.statusLine.textContent = 'ОБНАРУЖЕНА ВТОРАЯ ВКЛАДКА. МЫ ВСЁ ВИДИМ.';
+          refs.statusLine.style.opacity = '1';
+          setTimeout(() => { refs.statusLine.style.opacity = '0'; }, 3600);
+        }
+      };
+      window._bcChannel = bc;
+    } catch (e) {}
+  }
+
+  function initManifestAndPwa() {
+    const manifestData = {
+      name: 'ONE MILLION SECONDS',
+      short_name: '1M SEC',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#000000',
+      theme_color: '#000000',
+      icons: [{
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23000'/%3E%3Ctext x='50%25' y='55%25' font-size='80' text-anchor='middle' dominant-baseline='middle' fill='%2300ff41' font-family='monospace'%3E%E2%88%9E%3C/text%3E%3C/svg%3E",
+        sizes: '192x192',
+        type: 'image/svg+xml',
+      }],
+    };
+    try {
+      const blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+      document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+    } catch (e) {}
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      state.deferredPrompt = event;
+      if (state.currentPhase >= 1) {
+        setTimeout(() => { refs.pwaBanner.style.display = 'flex'; }, 5000);
+      }
+    });
+
+    refs.pwaInstallBtn.addEventListener('click', async () => {
+      if (!state.deferredPrompt) return;
+      state.deferredPrompt.prompt();
+      await state.deferredPrompt.userChoice;
+      state.deferredPrompt = null;
+      refs.pwaBanner.style.display = 'none';
+    });
+  }
+
+  function initTimers() {
+    setInterval(updateSessionTick, 1000);
+    setInterval(updatePresence, 4000);
+    setInterval(updateIdle, 1000);
+    setInterval(updateSeenProgress, 1000);
+    setInterval(maybeStatusPulse, 5000);
+    setInterval(maybeRandomGridPulse, 300);
+  }
+
+  function initBannedState() {
+    try {
+      const until = parseInt(localStorage.getItem('oms_ban_until') || '0', 10);
+      if (until && Date.now() < until) {
+        window.__banned = true;
+        OMS.phases.showBanScreen(until);
+      } else {
+        window.__banned = false;
+      }
+    } catch (e) {
+      window.__banned = false;
+    }
+  }
+
+  function exposePublicApi() {
+    window.toggleMute = OMS.audio.toggleMute;
+    window.resetFromCat = OMS.phases.resetFromCat;
+    window.resetToPhase1 = OMS.phases.resetToPhase1;
+    window.showCatPhase = OMS.phases.showCatPhase;
+    window.openNews = OMS.features.openNews;
+    window.tutNext = OMS.features.tutNext || function tutNext() {};
+  }
+
+  function logBanner() {
+    console.log('%cWELCOME TO ONE MILLION SECONDS', 'color:#00ff41; font-size:20px; font-family:monospace');
+    console.log('%cYOU FOUND THE CONSOLE. YOU CANNOT ESCAPE.', 'color:#ff0033; font-size:12px; font-family:monospace');
+    console.log(`%cVISIT #${visit.data.count}`, 'color:#ffaa00; font-size:14px; font-family:monospace');
+    console.log(`%cСАУНДСКЕЙП: ${constants.SOUND_NAMES[OMS.audio.soundMode]}`, 'color:#ffaa00; font-size:12px; font-family:monospace');
+  }
+
+  function init() {
+    initPersistentState();
+    initVisitData();
+    initManifestAndPwa();
+    initBroadcastChannel();
+    bindGlobalVisibilityHandlers();
+    bindResize();
+    bindBeforeUnload();
+    OMS.visuals.initVisualSystems();
+    OMS.grid.buildNoiseGrid();
+    OMS.features.injectSponsorCell();
+    OMS.events.setupInputHandlers();
+    OMS.features.setupPassiveFeatures();
+    initTimers();
+    initBannedState();
+    exposePublicApi();
+    logBanner();
+    state.rafId = requestAnimationFrame(OMS.visuals.renderFrame);
+  }
+
+  init();
+})();
