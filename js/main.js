@@ -4,7 +4,7 @@
   const state = OMS.state;
   const visit = OMS.visit;
   const constants = OMS.constants;
-  const helpers = OMS.helpers;
+  const helpers = OMS.utils;
 
   function updateSessionTick() {
     state.sessionSeconds += 1;
@@ -55,7 +55,7 @@
       state.activeSeconds = Math.min(state.activeSeconds + 1, constants.TOTAL_NEEDED_SECONDS);
       try { localStorage.setItem('oms_active', String(state.activeSeconds)); } catch (e) {}
     }
-    state.seenPct = helpers.getSeenPct();
+      state.seenPct = helpers.getSeenPct();
   }
 
   function maybeRandomGridPulse() {
@@ -133,7 +133,7 @@
   function bindResize() {
     window.addEventListener('resize', () => {
       OMS.visuals.resizeCanvas();
-      if (state.currentPhase === 2) OMS.phases.positionEscapeButton();
+      if (state.currentPhase === 2) OMS.phases.positionBtn();
     });
   }
 
@@ -223,12 +223,13 @@
   }
 
   function exposePublicApi() {
-    window.toggleMute = OMS.audio.toggleMute;
+    window.toggleMute = OMS.audioApi.toggleMute;
     window.resetFromCat = OMS.phases.resetFromCat;
     window.resetToPhase1 = OMS.phases.resetToPhase1;
     window.showCatPhase = OMS.phases.showCatPhase;
     window.openNews = OMS.features.openNews;
-    window.tutNext = OMS.features.tutNext || function tutNext() {};
+    window.tutNext = () => OMS.features.tutNext();
+    OMS.main = { showVisitBadge, toggleSecretConsole };
   }
 
   function logBanner() {
@@ -249,6 +250,7 @@
     OMS.visuals.initVisualSystems();
     OMS.grid.buildNoiseGrid();
     OMS.features.injectSponsorCell();
+    OMS.audioApi.setupAudioUi();
     OMS.events.setupInputHandlers();
     OMS.features.setupPassiveFeatures();
     initTimers();
@@ -256,6 +258,29 @@
     exposePublicApi();
     logBanner();
     state.rafId = requestAnimationFrame(OMS.visuals.renderFrame);
+  }
+
+  function toggleSecretConsole() {
+    const existing = document.getElementById('secret-console');
+    if (existing) { existing.remove(); return; }
+    const el = document.createElement('div');
+    el.id = 'secret-console';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;height:220px;background:rgba(0,0,0,0.97);border-top:1px solid rgba(0,255,65,0.3);z-index:600;font-family:\"Share Tech Mono\",monospace;font-size:11px;color:#00ff41;padding:10px;overflow-y:auto;letter-spacing:0.1em;';
+    let nm = 'UNKNOWN';
+    try { nm = localStorage.getItem('oms_name') || 'UNKNOWN'; } catch (e) {}
+    el.innerHTML = `
+      <div style="color:rgba(0,255,65,0.4);margin-bottom:8px;">┌─ SYSTEM CONSOLE v2.0 ─────────────────────────────┐</div>
+      <div>> ИДЕНТИФИКАТОР: ${nm}</div>
+      <div>> ВИЗИТОВ: ${OMS.visit.data.count}</div>
+      <div>> АКТИВНОЕ ВРЕМЯ: ${Math.floor(state.activeSeconds / 60)} мин ${state.activeSeconds % 60} сек</div>
+      <div>> БАН АКТИВЕН: ${window.__banned ? 'ДА' : 'НЕТ'}</div>
+      <div>> САУНДСКЕЙП: ${constants.SOUND_NAMES[OMS.audio.soundMode]}</div>
+      <div>> РАЗРЕШЕНИЕ: ${window.innerWidth}×${window.innerHeight}</div>
+      <div>> КЛИКИ ПО TOKYO: ${state.tokyoClicks}</div>
+      <div style="margin-top:8px;color:rgba(0,255,65,0.3);">└─────────────────────────────────────────────────────┘</div>
+      <div style="color:rgba(0,255,65,0.2);margin-top:4px;">[ ~ / ё — закрыть ]</div>
+    `;
+    document.body.appendChild(el);
   }
 
   init();
