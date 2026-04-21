@@ -190,6 +190,7 @@ window.OMS = window.OMS || {};
     lastRandGlitch: 0,
     cellClickCount: 0,
     introAccepted: false,
+    statusHoldUntil: 0,
     secretProgress: {},
     unlockedSecrets: new Set(),
     newSecretCount: 0,

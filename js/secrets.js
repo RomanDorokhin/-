@@ -6,7 +6,8 @@ window.OMS = window.OMS || {};
   const S = OMS.state;
   const R = OMS.refs;
   const registry = new Map(C.SECRET_DEFS.map((def) => [def.id, def]));
-  const HINT_INTERVAL_MS = 20000;
+  const HINT_INTERVAL_MS = 16000;
+  const HINT_COOLDOWN_MS = 9000;
   let hintTimer = 0;
   let statusResetTimer = 0;
 
@@ -111,15 +112,41 @@ window.OMS = window.OMS || {};
     }, 2200);
   }
 
+  function queueHint(text) {
+    if (!text || text === S.lastHintText) return;
+    const now = Date.now();
+    if (now - S.lastHintAt < HINT_COOLDOWN_MS) return;
+    S.lastHintText = text;
+    S.lastHintAt = now;
+    flashStatusLine(text);
+  }
+
+  function getContextHintRule() {
+    const unlocked = getUnlockedCount();
+    if (!S.introAccepted) return 'ПОДСКАЗКА: сначала запусти охоту на стартовом экране.';
+    if (S.currentPhase < 2) return 'ПОДСКАЗКА: движение запускает активный сеанс.';
+    if (unlocked === 0) return 'ПОДСКАЗКА: начни с первой ячейки в сетке.';
+    if (S.cellClickCount < 10) return 'ПОДСКАЗКА: тестируй разные каналы и ритм кликов.';
+    if (!S.unlockedSecrets.has('forbidden_button')) return 'ПОДСКАЗКА: запретная кнопка может быть частью маршрута.';
+    if (!S.unlockedSecrets.has('casino')) return 'ПОДСКАЗКА: среди каналов есть особый спонсорский след.';
+    if (!S.unlockedSecrets.has('konami')) return 'ПОДСКАЗКА: старые комбинации клавиш иногда работают.';
+    if (!S.unlockedSecrets.has('console_access')) return 'ПОДСКАЗКА: сервисный режим открывается отдельной клавишей.';
+    if (!S.unlockedSecrets.has('godzilla') && S.tokyoClicks > 0) return 'ПОДСКАЗКА: TOKYO реагирует на настойчивость.';
+    if (!S.unlockedSecrets.has('emergency_exit')) return 'ПОДСКАЗКА: аварийные горячие клавиши доступны в сеансе.';
+    return '';
+  }
+
   function getNextHint() {
+    const contextual = getContextHintRule();
+    if (contextual) return contextual;
     const next = C.SECRET_DEFS.find((def) => !S.unlockedSecrets.has(def.id));
     if (!next) return 'ПОДСКАЗКА: ВСЕ СЕКРЕТЫ ИЗ ТЕКУЩЕЙ ВЕРСИИ НАЙДЕНЫ.';
     return `ПОДСКАЗКА: ${next.hint}`;
   }
 
   function showHint() {
-    if (S.currentPhase !== 2) return;
-    flashStatusLine(getNextHint());
+    if (S.currentPhase < 1) return;
+    queueHint(getNextHint());
   }
 
   function unlockSecret(secretId, meta = {}) {
@@ -134,6 +161,7 @@ window.OMS = window.OMS || {};
     updateCounter();
     updateBackpackBadge();
     renderBackpack();
+    S.lastHintText = '';
     flashStatusLine(`СЕКРЕТ ОТКРЫТ: ${def.title}`);
     return true;
   }
@@ -198,6 +226,7 @@ window.OMS = window.OMS || {};
     bindUi();
     clearInterval(hintTimer);
     hintTimer = setInterval(showHint, HINT_INTERVAL_MS);
+    setTimeout(showHint, 1200);
   }
 
   OMS.secrets = {
