@@ -51,7 +51,7 @@ window.OMS = window.OMS || {};
     base.control.doubleSpaceWindowMs = Math.max(180, 400 - cp);
     base.control.controlScale = controlScale;
     base.control.buttonSpeedMultiplier = 1 + cp / 260;
-    base.control.invertEnabled = cp >= 28;
+    base.control.invertControls = cp >= 28;
     base.control.shaderSpeedBoost = 1 + cp / 220;
     base.control.mouseVelocityScale = Math.min(2.2, 1 + cp / 260);
 
@@ -83,11 +83,7 @@ window.OMS = window.OMS || {};
       : 'INIT';
     base.meta.presenceMultiplier = Math.min(2.8, 1 + base.meta.level * 0.12 + mxp / 900);
 
-    S.runtime.controlScale = base.control.controlScale;
-    S.runtime.buttonSpeedMultiplier = base.control.buttonSpeedMultiplier;
-    S.runtime.invertControls = base.control.invertEnabled;
-
-    document.body.classList.toggle('secret-input-inverted', S.runtime.invertControls);
+    document.body.classList.toggle('secret-input-inverted', base.control.invertControls);
     document.body.classList.toggle('secret-world-shift', base.world.hueRotate > 18);
     document.body.style.filter = `hue-rotate(${base.world.hueRotate.toFixed(1)}deg) saturate(${base.world.saturate.toFixed(2)})`;
   }
