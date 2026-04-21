@@ -144,6 +144,12 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
   }
 
+  function buildSnakeFailureMessage(prefix) {
+    const collected = S.sponsorQuest.score;
+    const remaining = Math.max(0, S.sponsorQuest.targetScore - collected);
+    return `${prefix} // СОБРАНО ${collected}/${S.sponsorQuest.targetScore} // ОСТАЛОСЬ ${remaining}`;
+  }
+
   function finalizeSponsorSecret() {
     const cells = document.querySelectorAll('.noise-cell');
     cells.forEach((cell) => {
@@ -306,7 +312,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         <div class="snake-start-kicker">СЕКРЕТНЫЙ РЕЖИМ</div>
         <div class="snake-start-title">ЗМЕЙКА</div>
         <div class="snake-start-copy">
-          Чтобы <b>засчитать секрет</b>, съешь <b>20 добычи</b>.<br>
+          Чтобы <b>засчитать секрет</b>, съешь <b>15 добычи</b>.<br>
           После каждой добычи змейка растет и становится светлее.
         </div>
         <div class="snake-start-rules">
@@ -321,7 +327,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           <button id="sponsor-quest-close" class="snake-start-ghost" type="button">ВЫЙТИ ИЗ РЕЖИМА</button>
         </div>
         <div class="snake-start-footnote">
-          Секрет добавится в счетчик только после 20 добычи.
+          Секрет добавится в счетчик только после 15 добычи.
         </div>
       </div>
     `;
@@ -401,14 +407,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
     if (nx < 0 || nx > 9 || ny < 0 || ny > 9) {
       OMS.audioApi.playSnakeFail();
-      resetSponsorQuest('КРАЙ СЕТКИ: ОЧКИ СБРОШЕНЫ');
+      resetSponsorQuest(buildSnakeFailureMessage('ТЫ ВРЕЗАЛСЯ В КРАЙ'));
       return;
     }
 
     const nextIdx = ny * 10 + nx;
     if (S.sponsorQuest.snakeTail.includes(nextIdx)) {
       OMS.audioApi.playSnakeFail();
-      resetSponsorQuest('КВЕСТ СОРВАН: ТЫ ВРЕЗАЛСЯ В ХВОСТ');
+      resetSponsorQuest(buildSnakeFailureMessage('ТЫ ВРЕЗАЛСЯ В ХВОСТ'));
       return;
     }
 

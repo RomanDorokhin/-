@@ -114,7 +114,7 @@ window.OMS = window.OMS || {};
         id: 'sponsor_snake',
         title: 'ЗМЕЯ СПОНСОРА',
         hint: 'В секретном режиме стрелки работают наоборот.',
-        description: 'Секрет засчитан только после 20 добычи в странной змейке со стрелками и WASD.',
+        description: 'Секрет засчитан только после 15 добычи в странной змейке со стрелками и WASD.',
         category: 'achievement',
       },
       {
@@ -246,7 +246,7 @@ window.OMS = window.OMS || {};
       active: false,
       ready: false,
       score: 0,
-      targetScore: 20,
+      targetScore: 15,
       food: { x: 7, y: 2 },
       objective: { x: 7, y: 2 },
       snakeTail: [],
