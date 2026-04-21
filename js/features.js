@@ -21,6 +21,10 @@ window.OMS = window.OMS || {};
     if (mark) mark.remove();
   }
 
+function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
+  cells.forEach((cell) => clearQuestCellMark(cell));
+}
+
   function clearSponsorClickBindings(cell) {
     if (!cell) return;
     if (cell._sponsorClickHandler) {
@@ -106,6 +110,18 @@ window.OMS = window.OMS || {};
     if (warning) warning.remove();
   }
 
+function beginSponsorQuestPlay() {
+  if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
+  clearSponsorQuestWarning();
+  S.sponsorQuest.ready = true;
+  OMS.audioApi.startSnakeMode();
+  S.sponsorQuest.tickTimer = setInterval(() => {
+    tickSnake();
+  }, S.sponsorQuest.speedMs || 300);
+  OMS.audioApi.playSnakeTurnCue();
+  setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
+}
+
   function finalizeSponsorSecret() {
     const cells = document.querySelectorAll('.noise-cell');
     cells.forEach((cell) => {
@@ -166,10 +182,10 @@ window.OMS = window.OMS || {};
 
   function paintQuestTarget(cells) {
     if (!S.sponsorQuest.active) return;
+  clearQuestMarks(cells);
     const idx = S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x;
     const cell = cells[idx];
     if (!cell) return;
-    clearQuestCellMark(cell);
     const marker = document.createElement('div');
     marker.className = 'quest-target';
     marker.style.cssText = `
@@ -200,7 +216,7 @@ window.OMS = window.OMS || {};
       S.sponsorQuest.tickTimer = null;
     }
     const cells = document.querySelectorAll('.noise-cell');
-    cells.forEach((cell) => clearQuestCellMark(cell));
+  clearQuestMarks(cells);
     cells.forEach((cell) => {
       cell.classList.remove('sponsor-tail', 'sponsor-head', 'snake-complete');
       clearSnakeCellVisual(cell);
@@ -261,40 +277,32 @@ window.OMS = window.OMS || {};
     updateSponsorQuestUi();
     const warning = document.createElement('div');
     warning.id = 'sponsor-quest-warning';
-    warning.style.cssText = `
-      position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-      z-index:260;background:rgba(0,0,0,0.96);border:1px solid rgba(235,245,255,0.62);
-      box-shadow:0 0 45px rgba(180,220,255,0.18);padding:28px 36px;text-align:center;
-      font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;color:#e9f6ff;
-      min-width:min(92vw, 620px);
-    `;
     warning.innerHTML = `
-      <div style="font-size:clamp(28px,4vw,44px);line-height:1.1;font-family:'VT323',monospace;letter-spacing:0.12em;">
-        СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА
+    <div class="sponsor-warning-card">
+      <div class="sponsor-warning-kicker">СЕКРЕТ ОБНАРУЖЕН</div>
+      <div class="sponsor-warning-title">ЗМЕЙКА</div>
+      <div class="sponsor-warning-copy">
+        Собери <b>20 добычи</b>.<br>
+        После каждой добычи змейка растет и становится светлее.
       </div>
-      <div style="font-size:clamp(14px,1.8vw,20px);margin-top:12px;opacity:0.92;line-height:1.6;">
-        СОБЕРИ 20 ДОБЫЧИ.<br>ПОСЛЕ КАЖДОЙ ДОБЫЧИ ЗМЕЙКА РАСТЁТ И СТАНОВИТСЯ СВЕТЛЕЕ.
+      <div class="sponsor-warning-rules">
+        <span><b>←</b> ведет вправо</span>
+        <span><b>→</b> ведет влево</span>
+        <span><b>↑</b> ведет вниз</span>
+        <span><b>↓</b> ведет вверх</span>
       </div>
-      <div style="font-size:clamp(12px,1.5vw,17px);margin-top:14px;opacity:0.72;line-height:1.9;">
-        УПРАВЛЕНИЕ ИНВЕРСНОЕ И СТРОГОЕ:<br>
-        ← ВЕДЁТ ВПРАВО // → ВЕДЁТ ВЛЕВО // ↑ ВЕДЁТ ВНИЗ // ↓ ВЕДЁТ ВВЕРХ
+      <div class="sponsor-warning-foot">
+        Нажми кнопку ниже, когда будешь готов начать.
       </div>
-      <div style="font-size:clamp(11px,1.4vw,15px);margin-top:14px;opacity:0.48;letter-spacing:0.16em;">
-        СЕЙЧАС РЕЖИМ ЗАПУСТИТСЯ
-      </div>
-    `;
+      <button id="sponsor-quest-start" class="sponsor-warning-start" type="button">
+        НАЧАТЬ
+      </button>
+    </div>
+  `;
     document.body.appendChild(warning);
-    OMS.audioApi.startSnakeMode();
-    S.sponsorQuest.startTimer = setTimeout(() => {
-      clearSponsorQuestWarning();
-      S.sponsorQuest.ready = true;
-      S.sponsorQuest.tickTimer = setInterval(() => {
-        tickSnake();
-      }, S.sponsorQuest.speedMs || 300);
-      OMS.audioApi.playSnakeTurnCue();
-      setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
-    }, 2600);
-    setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ АКТИВИРУЕТСЯ...', 2400);
+  const startBtn = document.getElementById('sponsor-quest-start');
+  if (startBtn) startBtn.addEventListener('click', beginSponsorQuestPlay);
+  setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ ГОТОВ // НАЖМИ НАЧАТЬ', 2600);
   }
 
   function renderSnake(cells) {
@@ -379,6 +387,7 @@ window.OMS = window.OMS || {};
     }
     const hitFood = nx === S.sponsorQuest.objective.x && ny === S.sponsorQuest.objective.y;
     if (hitFood) {
+      clearQuestCellMark(foodCell);
       S.sponsorQuest.score += 1;
       OMS.audioApi.playSnakeEat(Math.max(0, S.sponsorQuest.score - 1) / S.sponsorQuest.targetScore);
       setSnakeStatus(`ДОБЫЧА ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore} // ЗМЕЙКА РАСТЁТ`, 900);
@@ -692,10 +701,12 @@ window.OMS = window.OMS || {};
       return;
     }
     if (!S.sponsorQuest.ready) return;
-    if (dx === 0 && dy === 0) return;
-    if (!canQueueSnakeTurn(dx, dy)) return;
-    S.sponsorQuest.intentX = dx;
-    S.sponsorQuest.intentY = dy;
+  const reversedX = dx * -1;
+  const reversedY = dy * -1;
+  if (reversedX === 0 && reversedY === 0) return;
+  if (!canQueueSnakeTurn(reversedX, reversedY)) return;
+  S.sponsorQuest.intentX = reversedX;
+  S.sponsorQuest.intentY = reversedY;
     OMS.audioApi.playSnakeTurnCue();
   }
 
