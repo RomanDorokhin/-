@@ -39,8 +39,8 @@ window.OMS = window.OMS || {};
     if (S.exploded) return;
     S.exploded = true;
     if (OMS.secrets) OMS.secrets.unlockSecret('entry_signal', { source: 'phase_transition' });
-    OMS.audioApi.playExplosionSound();
-    OMS.effects.triggerExplosion();
+    try { OMS.audioApi.playExplosionSound(); } catch (e) {}
+    try { OMS.effects.triggerExplosion(); } catch (e) {}
     setTimeout(() => {
       showPhase(1);
       R.countdown.style.opacity = '1';

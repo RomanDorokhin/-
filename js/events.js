@@ -41,7 +41,7 @@ window.OMS = window.OMS || {};
       R.coords.innerHTML = `X: ${String(e.clientX).padStart(4, '0')}<br>Y: ${String(e.clientY).padStart(4, '0')}<br>Δ: ${S.mouseVel.toFixed(3)}`;
 
       if (S.currentPhase === 0 && S.totalMouseDist > 300 && !S.exploded && !window.__banned && S.introAccepted) {
-        OMS.audioApi.initAudio();
+        try { OMS.audioApi.initAudio(); } catch (err) {}
         OMS.phases.goToPhase2();
       }
 
@@ -241,7 +241,7 @@ window.OMS = window.OMS || {};
         S.lastMY = S.mouseY = t.clientY;
         S.lastActivity = Date.now();
         if (S.currentPhase === 0 && S.totalMouseDist > 150 && !S.exploded && S.introAccepted) {
-          OMS.audioApi.initAudio();
+          try { OMS.audioApi.initAudio(); } catch (err) {}
           OMS.phases.goToPhase2();
         }
       }, { passive: true });

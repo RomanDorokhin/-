@@ -5,8 +5,14 @@ window.OMS = window.OMS || {};
   const { state, audio, constants, refs } = OMS;
 
   function initAudio() {
-    if (audio.ctx) return;
-    audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.ctx) return true;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return false;
+    try {
+      audio.ctx = new AudioCtx();
+    } catch (e) {
+      return false;
+    }
     audio.masterGain = audio.ctx.createGain();
     audio.masterGain.gain.value = 0;
     audio.masterGain.connect(audio.ctx.destination);
@@ -37,6 +43,7 @@ window.OMS = window.OMS || {};
     }
 
     audio.masterGain.gain.linearRampToValueAtTime(state.currentVolume, t + 1.2);
+    return true;
   }
 
   function playGlitchSound() {
