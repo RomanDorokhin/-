@@ -97,15 +97,27 @@ window.OMS = window.OMS || {};
         return;
       }
       if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
-        if (S.ebtState === 'e') { S.ebtState = 'b'; OMS.features.triggerScreamer(); } else S.ebtState = '';
+        if (S.ebtState === 'e') {
+          S.ebtState = 'b';
+          if (OMS.secrets) OMS.secrets.unlockSecret('ebat_b', { source: 'ebat_sequence' });
+          OMS.features.triggerScreamer();
+        } else S.ebtState = '';
         return;
       }
       if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') {
-        if (S.ebtState === 'b') { S.ebtState = 'a'; OMS.features.triggerPhoneMeme(); } else S.ebtState = '';
+        if (S.ebtState === 'b') {
+          S.ebtState = 'a';
+          if (OMS.secrets) OMS.secrets.unlockSecret('ebat_a', { source: 'ebat_sequence' });
+          OMS.features.triggerPhoneMeme();
+        } else S.ebtState = '';
         return;
       }
       if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') {
-        if (S.ebtState === 'a') { S.ebtState = ''; OMS.features.triggerRansheByloLuchshe(); } else S.ebtState = '';
+        if (S.ebtState === 'a') {
+          S.ebtState = '';
+          if (OMS.secrets) OMS.secrets.unlockSecret('ebat_t', { source: 'ebat_sequence' });
+          OMS.features.triggerRansheByloLuchshe();
+        } else S.ebtState = '';
         return;
       }
 
@@ -127,10 +139,11 @@ window.OMS = window.OMS || {};
       if (e.key === ' ') {
         if (OMS.secrets) OMS.secrets.markMeaninglessAction('space');
         const now = Date.now();
-        if (now - S.lastSpace < 400) {
+        if (S.currentPhase >= 1 && now - S.lastSpace < 400) {
           S.flipped = !S.flipped;
           document.body.style.transition = 'transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55)';
           document.body.style.transform = S.flipped ? 'rotate(180deg)' : 'rotate(0deg)';
+          if (OMS.secrets) OMS.secrets.unlockSecret('double_space', { source: 'double_space' });
           OMS.audioApi.playGlitchSound();
         }
         S.lastSpace = now;
