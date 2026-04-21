@@ -248,6 +248,12 @@ window.OMS = window.OMS || {};
       targetScore: 100,
       objective: { x: 7, y: 2 },
       snakeTail: [],
+      directionX: 1,
+      directionY: 0,
+      intentX: 1,
+      intentY: 0,
+      tickTimer: null,
+      speedMs: 180,
       lastTapAt: 0,
     },
     secretSystems: {

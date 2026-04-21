@@ -194,6 +194,48 @@ body.secret-input-inverted #phase-cat {
   gap: 40px;
 }
 
+body.snake-mode #scanlines,
+body.snake-mode #noise,
+body.snake-mode #status-line,
+body.snake-mode #coords,
+body.snake-mode #countdown,
+body.snake-mode #visitor-id,
+body.snake-mode #waveform,
+body.snake-mode #global-presence,
+body.snake-mode #idle-msg,
+body.snake-mode #session-time,
+body.snake-mode #mute-btn,
+body.snake-mode #vol-wrap,
+body.snake-mode #visit-badge,
+body.snake-mode #konami-hint,
+body.snake-mode #phase3-bottom,
+body.snake-mode #secrets-hud {
+  opacity: 0.08 !important;
+  pointer-events: none !important;
+}
+
+body.snake-mode #noise-grid {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 35px rgba(0, 255, 65, 0.25),
+    0 0 90px rgba(0, 130, 255, 0.18);
+}
+
+body.snake-mode .noise-cell {
+  border-color: rgba(40, 160, 255, 0.28);
+  background: rgba(14, 44, 96, 0.42);
+}
+
+.noise-cell.sponsor-head .cell-front {
+  border-color: rgba(0, 255, 65, 0.85) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.8), inset 0 0 20px rgba(0, 255, 65, 0.25);
+}
+
+.noise-cell.sponsor-tail .cell-front {
+  border-color: rgba(0, 200, 140, 0.6) !important;
+  box-shadow: inset 0 0 14px rgba(0, 200, 140, 0.2);
+}
+
 .section-title {
   font-family: 'VT323', monospace;
   font-size: clamp(10px, 1.2vw, 16px);

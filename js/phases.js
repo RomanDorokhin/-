@@ -278,9 +278,6 @@ window.OMS = window.OMS || {};
   }
 
   function resetToPhase1() {
-    if (OMS.features && OMS.features.resetSponsorQuest) {
-      OMS.features.resetSponsorQuest();
-    }
     S.exploded = false;
     S.currentPhase = 0;
     S.countdownSec = 86399;
