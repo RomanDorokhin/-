@@ -15,8 +15,68 @@ window.OMS = window.OMS || {};
   ];
   const slotSymbols = ['🍒', '7️⃣', '💎', '⭐', '🔔', '🍋', '💰', '🎰', '👑', '🃏'];
 
+  function clearQuestCellMark(cell) {
+    if (!cell) return;
+    const mark = cell.querySelector('.quest-target');
+    if (mark) mark.remove();
+  }
+
+  function paintQuestTarget(cells) {
+    if (!S.sponsorQuest.active) return;
+    const idx = S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x;
+    const cell = cells[idx];
+    if (!cell) return;
+    clearQuestCellMark(cell);
+    const marker = document.createElement('div');
+    marker.className = 'quest-target';
+    marker.style.cssText = `
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:10px; color:#ff0033; text-shadow:0 0 10px #ff0033;
+      pointer-events:none; z-index:6; letter-spacing:0.05em;
+    `;
+    marker.textContent = '◉';
+    cell.appendChild(marker);
+  }
+
+  function resetSponsorQuest(reason = '') {
+    S.sponsorQuest.active = false;
+    S.sponsorQuest.score = 0;
+    S.sponsorQuest.snakeTail = [];
+    const cells = document.querySelectorAll('.noise-cell');
+    cells.forEach((cell) => clearQuestCellMark(cell));
+    if (reason && R.statusLine && S.currentPhase >= 1) {
+      R.statusLine.textContent = reason;
+      R.statusLine.style.opacity = '1';
+      setTimeout(() => { R.statusLine.style.opacity = '0'; }, 1800);
+    }
+  }
+
+  function startSponsorQuest() {
+    const cells = document.querySelectorAll('.noise-cell');
+    if (!cells.length || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    S.sponsorQuest.active = true;
+    S.sponsorQuest.score = 0;
+    S.sponsorQuest.snakeTail = [];
+    const forbidden = new Set([S.sponsorGridY * 10 + S.sponsorGridX, 42]);
+    let ox = 0;
+    let oy = 0;
+    do {
+      ox = Math.floor(Math.random() * 10);
+      oy = Math.floor(Math.random() * 10);
+    } while (forbidden.has(oy * 10 + ox));
+    S.sponsorQuest.objective.x = ox;
+    S.sponsorQuest.objective.y = oy;
+    paintQuestTarget(cells);
+    if (R.statusLine) {
+      R.statusLine.textContent = 'КВЕСТ: РЕВЕРС-ЗМЕЙКА // СОБЕРИ 7 МЕТОК';
+      R.statusLine.style.opacity = '1';
+      setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2200);
+    }
+  }
+
   function showCasinoAd() {
-    if (S.casinoShown || S.currentPhase !== 2) return;
+    if (S.casinoShown || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
     S.casinoShown = true;
     const ad = casinoAds[Math.floor(Math.random() * casinoAds.length)];
     const overlay = document.createElement('div');
@@ -285,7 +345,7 @@ window.OMS = window.OMS || {};
   }
 
   function moveSponsorCell(dx, dy) {
-  if (S.currentPhase !== 2) return;
+  if (S.currentPhase !== 2 || S.lifetimeLimitReached) return;
   const cells = document.querySelectorAll('.noise-cell');
   const cols = 10;
   const oldIdx = S.sponsorGridY * cols + S.sponsorGridX;
@@ -293,18 +353,65 @@ window.OMS = window.OMS || {};
     leaveSponsorTrace(cells[oldIdx]);
     cells[oldIdx].classList.remove('sponsor');
   }
+
+  if (S.sponsorQuest.active) {
+    dx *= -1;
+    dy *= -1;
+    S.sponsorQuest.snakeTail.push(oldIdx);
+    if (S.sponsorQuest.snakeTail.length > 6) S.sponsorQuest.snakeTail.shift();
+  }
+
   S.sponsorGridX = Math.max(0, Math.min(cols - 1, S.sponsorGridX + dx));
   S.sponsorGridY = Math.max(0, Math.min(9, S.sponsorGridY + dy));
   const newIdx = S.sponsorGridY * cols + S.sponsorGridX;
   const newCell = cells[newIdx];
   if (!newCell) return;
+
+  if (S.sponsorQuest.active && S.sponsorQuest.snakeTail.includes(newIdx)) {
+    resetSponsorQuest('КВЕСТ СОРВАН: ТЫ ВРЕЗАЛСЯ В ХВОСТ');
+    newCell.classList.add('sponsor');
+    return;
+  }
+
   newCell.classList.add('sponsor');
   const lbl = newCell.querySelector('.cell-label');
   if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
-  OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
+
+  if (S.sponsorQuest.active) {
+    const hitObjective = S.sponsorGridX === S.sponsorQuest.objective.x && S.sponsorGridY === S.sponsorQuest.objective.y;
+    if (hitObjective) {
+      S.sponsorQuest.score += 1;
+      if (R.statusLine) {
+        R.statusLine.textContent = `КВЕСТ: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`;
+        R.statusLine.style.opacity = '1';
+        setTimeout(() => { R.statusLine.style.opacity = '0'; }, 900);
+      }
+      if (S.sponsorQuest.score >= S.sponsorQuest.targetScore) {
+        resetSponsorQuest('КВЕСТ ВЫПОЛНЕН');
+        if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor_snake_quest' });
+      } else {
+        let ox = 0;
+        let oy = 0;
+        const occupied = new Set(S.sponsorQuest.snakeTail);
+        occupied.add(newIdx);
+        do {
+          ox = Math.floor(Math.random() * 10);
+          oy = Math.floor(Math.random() * 10);
+        } while (occupied.has(oy * 10 + ox));
+        S.sponsorQuest.objective.x = ox;
+        S.sponsorQuest.objective.y = oy;
+        paintQuestTarget(cells);
+      }
+    } else {
+      paintQuestTarget(cells);
+    }
+    OMS.effects.showTooltip(`КВЕСТ: ${S.sponsorQuest.score}/${S.sponsorQuest.targetScore}`, newCell);
+  } else {
+    OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
+    const atEdge = S.sponsorGridX === 0 || S.sponsorGridX === 9 || S.sponsorGridY === 0 || S.sponsorGridY === 9;
+    if (atEdge) startSponsorQuest();
+  }
   setTimeout(OMS.effects.hideTooltip, 800);
-  const atEdge = S.sponsorGridX === 0 || S.sponsorGridX === 9 || S.sponsorGridY === 0 || S.sponsorGridY === 9;
-  if (atEdge) showCasinoAd();
   }
 
   function showGodzilla() {

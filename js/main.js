@@ -6,9 +6,72 @@
   const constants = OMS.constants;
   const helpers = OMS.utils;
   const INTRO_STORAGE_KEY = 'oms_intro_seen';
+  const STORAGE_LIFETIME_SECONDS = constants.LIFETIME_SECONDS_KEY;
+
+  function persistLifetimeSeconds() {
+    try {
+      localStorage.setItem(STORAGE_LIFETIME_SECONDS, String(state.lifetimeSeconds));
+    } catch (e) {}
+  }
+
+  function showLifetimeLockOverlay() {
+    const existing = document.getElementById('lifetime-lock');
+    if (existing) existing.remove();
+    const lock = document.createElement('div');
+    lock.id = 'lifetime-lock';
+    lock.style.cssText = `
+      position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.96);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:20px;gap:14px;
+      font-family:'Share Tech Mono',monospace;color:#00ff41;
+    `;
+    const hours = Math.floor(constants.LIFETIME_LIMIT_SECONDS / 3600);
+    lock.innerHTML = `
+      <div style="font-family:'VT323',monospace;font-size:clamp(36px,8vw,80px);letter-spacing:0.12em;color:#ff0033;text-shadow:0 0 24px #ff0033;">
+        ЛИМИТ ИСЧЕРПАН
+      </div>
+      <div style="font-size:clamp(12px,2vw,18px);letter-spacing:0.08em;line-height:1.8;max-width:760px;">
+        ТЫ ИСПОЛЬЗОВАЛ ВСЕ <b>${constants.LIFETIME_LIMIT_SECONDS.toLocaleString('ru-RU')}</b> СЕКУНД.<br>
+        АКТИВНАЯ ИГРА БОЛЬШЕ НЕДОСТУПНА.
+      </div>
+      <div style="font-size:clamp(10px,1.7vw,14px);letter-spacing:0.1em;color:rgba(0,255,65,0.7);line-height:1.8;max-width:760px;">
+        У ТЕБЯ ОСТАЕТСЯ ДОСТУП К КОЛЛЕКЦИИ СЕКРЕТОВ (${hours}ч 46м 40с РЕАЛЬНОГО ВРЕМЕНИ ИГРЫ).<br>
+        НАЖМИ <b>I</b> / <b>Ш</b> ИЛИ КНОПКУ <b>РЮКЗАК</b>, ЧТОБЫ СМОТРЕТЬ ЧТО УЖЕ ОТКРЫТО.
+      </div>
+    `;
+    document.body.appendChild(lock);
+  }
+
+  function enforceLifetimeLock() {
+    state.lifetimeLimitReached = state.lifetimeSeconds >= constants.LIFETIME_LIMIT_SECONDS;
+    if (!state.lifetimeLimitReached) return;
+    state.currentPhase = 1;
+    state.exploded = true;
+    refs.escapeBtn.style.display = 'none';
+    refs.waveform.style.opacity = '0';
+    refs.globalPresence.style.opacity = '0';
+    refs.countdown.style.opacity = '0';
+    refs.visitorId.style.opacity = '0';
+    document.querySelectorAll('.phase').forEach((p) => p.classList.remove('active'));
+    const phase1 = document.getElementById('phase1');
+    if (phase1) phase1.classList.add('active');
+    showLifetimeLockOverlay();
+    refs.statusLine.textContent = 'ЛИМИТ 1 000 000 СЕКУНД ИСЧЕРПАН';
+    refs.statusLine.style.opacity = '1';
+    refs.progressTop.style.width = '100%';
+  }
 
   function updateSessionTick() {
+    if (state.lifetimeLimitReached) return;
     state.sessionSeconds += 1;
+    state.lifetimeSeconds += 1;
+    if ((state.lifetimeSeconds % 5) === 0) persistLifetimeSeconds();
+    if (state.lifetimeSeconds >= constants.LIFETIME_LIMIT_SECONDS) {
+      state.lifetimeSeconds = constants.LIFETIME_LIMIT_SECONDS;
+      persistLifetimeSeconds();
+      enforceLifetimeLock();
+      return;
+    }
     const basePct = Math.min(state.sessionSeconds / constants.SESSION_LIMIT_SECONDS * 100, 100);
     const drain = state.secretSystems.risk.sessionLimitScale || 1;
     const warpedPct = Math.min(basePct * drain, 100);
@@ -31,7 +94,7 @@
   }
 
   function updatePresence() {
-    if (state.currentPhase < 2) return;
+    if (state.currentPhase < 2 || state.lifetimeLimitReached) return;
     const drift = Math.floor(Math.random() * 40) - 15;
     if (state.basePresence === undefined) {
       state.basePresence = 1000 + Math.floor(Math.random() * 337);
@@ -54,7 +117,7 @@
   }
 
   function updateSeenProgress() {
-    if (state.currentPhase !== 2) return;
+    if (state.currentPhase !== 2 || state.lifetimeLimitReached) return;
     const idle = (Date.now() - state.lastActivity) / 1000;
     if (idle < 30 && !document.hidden) {
       state.activeSeconds = Math.min(state.activeSeconds + 1, constants.TOTAL_NEEDED_SECONDS);
@@ -64,7 +127,7 @@
   }
 
   function maybeRandomGridPulse() {
-    if (state.currentPhase !== 2) return;
+    if (state.currentPhase !== 2 || state.lifetimeLimitReached) return;
     const cells = refs.noiseGrid.querySelectorAll('.noise-cell');
     if (!cells.length) return;
     const randomCell = Math.floor(Math.random() * constants.GRID_COUNT);
@@ -76,7 +139,7 @@
   }
 
   function maybeStatusPulse() {
-    if (state.currentPhase < 1) return;
+    if (state.currentPhase < 1 || state.lifetimeLimitReached) return;
     if (Date.now() < state.statusHoldUntil) return;
     const msgs = [
       'СВЯЗЬ УСТАНОВЛЕНА',
@@ -133,6 +196,16 @@
       state.pendingForbiddenSecret = false;
       state.lastBanReason = 'generic';
     }
+    try {
+      const rawLifetime = parseInt(localStorage.getItem(STORAGE_LIFETIME_SECONDS) || '0', 10);
+      state.lifetimeBaseSeconds = Number.isFinite(rawLifetime) ? Math.max(0, rawLifetime) : 0;
+      state.lifetimeSeconds = state.lifetimeBaseSeconds;
+      state.lifetimeLimitReached = state.lifetimeSeconds >= constants.LIFETIME_LIMIT_SECONDS;
+    } catch (e) {
+      state.lifetimeBaseSeconds = 0;
+      state.lifetimeSeconds = 0;
+      state.lifetimeLimitReached = false;
+    }
   }
 
   function hideIntroOverlay() {
@@ -149,6 +222,10 @@
 
   function initIntroFlow() {
     if (!refs.introStartBtn) return;
+    if (state.lifetimeLimitReached) {
+      hideIntroOverlay();
+      return;
+    }
     if (state.introAccepted) {
       hideIntroOverlay();
     } else {
@@ -319,6 +396,10 @@
     initBannedState();
     exposePublicApi();
     logBanner();
+    if (state.lifetimeLimitReached) {
+      enforceLifetimeLock();
+      return;
+    }
     state.rafId = requestAnimationFrame(OMS.visuals.renderFrame);
   }
 

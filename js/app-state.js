@@ -50,6 +50,7 @@ window.OMS = window.OMS || {};
 
   OMS.constants = {
     TOTAL_NEEDED_SECONDS: 86400,
+    LIFETIME_LIMIT_SECONDS: 1000000,
     GRID_COUNT: 100,
     SESSION_LIMIT_SECONDS: 900,
     DAY_SECONDS: 86400,
@@ -78,6 +79,7 @@ window.OMS = window.OMS || {};
     BAN_REASON_KEY: 'oms_ban_reason',
     PENDING_FORBIDDEN_SECRET_KEY: 'oms_pending_forbidden_secret',
     SECRET_STORAGE_KEY: 'oms_secrets_v1',
+    LIFETIME_SECONDS_KEY: 'oms_lifetime_seconds_v1',
     SECRET_DEFS: [
       {
         id: 'entry_signal',
@@ -103,10 +105,17 @@ window.OMS = window.OMS || {};
       {
         id: 'casino',
         title: 'ПАРА-КЛУБ',
-        hint: 'Ищи спонсора среди ячеек.',
-        description: 'Найдена интерактивная вставка с казино.',
+        hint: 'Спонсор любит стрелки, но в квесте всё наоборот.',
+        description: 'Квест спонсора пройден: реверс-управление и 7 меток собраны.',
         category: 'interactive',
         action: 'casino',
+      },
+      {
+        id: 'sponsor_snake',
+        title: 'ЗМЕЯ СПОНСОРА',
+        hint: 'Стрелки иногда ведут не туда, куда ждешь.',
+        description: 'Квест с реверсивным управлением пройден и засчитан.',
+        category: 'achievement',
       },
       {
         id: 'godzilla',
@@ -230,6 +239,16 @@ window.OMS = window.OMS || {};
     noiseActionCount: 0,
     sessionLimitTriggered: false,
     lastControlJoltAt: 0,
+    lifetimeBaseSeconds: 0,
+    lifetimeSeconds: 0,
+    lifetimeLimitReached: false,
+    sponsorQuest: {
+      active: false,
+      score: 0,
+      targetScore: 7,
+      objective: { x: 7, y: 2 },
+      snakeTail: [],
+    },
     secretSystems: {
       controlPower: 0,
       worldPower: 0,

@@ -319,7 +319,8 @@ window.OMS = window.OMS || {};
     }
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeBackpack();
-      if ((event.key === 'i' || event.key === 'I' || event.key === 'ш' || event.key === 'Ш') && S.currentPhase >= 1) {
+      const canOpenAnytime = S.lifetimeLimitReached === true;
+      if ((event.key === 'i' || event.key === 'I' || event.key === 'ш' || event.key === 'Ш') && (S.currentPhase >= 1 || canOpenAnytime)) {
         toggleBackpack();
       }
     });
