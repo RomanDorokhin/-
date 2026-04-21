@@ -1,34 +1,200 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>МОБИЛИЗАЦИЯ v5</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="1M SECONDS">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" id="pwa-manifest">
+<title>ONE MILLION SECONDS</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="ov">
-  <div class="ot">МОБИЛИЗАЦИЯ</div>
-  <div class="os">
-    ФАЗА 1 · СБОР (60 сек): бегай змейкой, хватай ресурсы и рекрутов<br>
-    ☢ С 20-й секунды начнут прилетать ядерные ракеты — берегись<br>
-    ФАЗА 2 · РАССТАНОВКА: поставь бойцов на свою сетку 10×10<br>
-    ФАЗА 3 · МОРСКОЙ БОЙ: стреляй по клеткам врага, найди всех
-  </div>
-  <button class="ob" onclick="startGame()">▶ НАЧАТЬ</button>
+
+<canvas id="canvas"></canvas>
+<div id="scanlines"></div>
+<canvas id="noise" width="512" height="512"></canvas>
+
+<div id="progress-top"></div>
+
+<div id="status-line">SYSTEM: INITIALIZING... VISITOR AUTHENTICATED</div>
+
+<div id="session-time">
+  SESSION<br>00:00:00
 </div>
-<script src="js/config.js"></script>
-<script src="js/state.js"></script>
-<script src="js/spawn.js"></script>
-<script src="js/movement.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/hazards.js"></script>
-<script src="js/nuke.js"></script>
-<script src="js/placement.js"></script>
-<script src="js/naval.js"></script>
-<script src="js/input.js"></script>
-<script src="js/render.js"></script>
+
+<div id="coords">
+  X: 0000<br>
+  Y: 0000<br>
+  Δ: 0.000
+</div>
+
+<!-- PHASE 1: fluid only -->
+<div id="phase1" class="phase active">
+  <div class="hint typed">move your cursor</div>
+</div>
+
+<!-- PHASE 2: WTF reveal -->
+<div id="phase2" class="phase">
+  <div class="wtf-text" id="wtf-msg">
+    ВЫ ЕДИНСТВЕННЫЙ<br>ПОСЕТИТЕЛЬ<br>НА ЭТОМ САЙТЕ<br>ПРЯМО СЕЙЧАС
+  </div>
+</div>
+
+<!-- VOLUME SLIDER -->
+<div id="vol-wrap">
+  <span id="vol-icon">VOL</span>
+  <input type="range" id="vol-slider" min="0" max="100" value="40">
+</div>
+
+<!-- MUTE BUTTON -->
+<button id="mute-btn" onclick="toggleMute()">◼ ЗВУК</button>
+
+<!-- GLOBAL PRESENCE -->
+<div id="global-presence">ОНЛАЙН: <span id="presence-counter">░░░░</span></div>
+
+<!-- MAIN COUNTDOWN -->
+<div id="countdown">СЕАНС ИСТЕКАЕТ: 23:59:59</div>
+<div id="visitor-id">
+  VISITOR_ID: ████████<br>
+  NODE: UNKNOWN<br>
+  PING: ████ms
+</div>
+
+<!-- WAVEFORM -->
+<div id="waveform">
+  <canvas id="wave-canvas" width="400" height="40"></canvas>
+</div>
+
+<!-- PHASE 3: main interaction -->
+<div id="phase3" class="phase">
+  <div id="phase3-inner">
+    <div id="phase3-top">
+      <div class="section-title">// MATRIX OF NOISE — SELECT A CHANNEL //</div>
+      <div id="noise-grid"></div>
+    </div>
+
+    <div id="phase3-bottom">
+      <div class="section-title">// ЗАПРЕЩЁННОЕ ДЕЙСТВИЕ //</div>
+      <div class="btn-warning">[ НЕ НАЖИМАТЬ ]</div>
+    </div>
+  </div>
+</div>
+
+<!-- ESCAPE BTN (floats) -->
+<button id="escape-btn">НЕ НАЖИМАТЬ</button>
+
+<!-- PHASE 4: game over -->
+<div id="phase4" class="phase">
+  <div id="seen-pct" style="display:none">0</div>
+  <div id="prog-fill" style="display:none"></div>
+  <div id="prog-label" style="display:none"></div>
+</div>
+
+<!-- PHASE CAT: timer zero -->
+<div id="phase-cat" class="phase">
+  <div id="cat-ascii"></div>
+  <div id="cat-msg">СВОБОДНЫЙ ИНТЕРНЕТ —<br>ЭТО МИФ</div>
+  <div id="cat-sub">
+    ТЫ ТОЛЬКО ЧТО<br>
+    ЭТО ДОКАЗАЛ
+  </div>
+  <div id="cat-timer">СЛЕДУЮЩИЙ СЕАНС: 24:00:00</div>
+  <button id="cat-restart" onclick="resetFromCat()">НАЧАТЬ СНОВА</button>
+</div>
+
+<div id="visit-badge">
+  ВИЗИТ #0<br>
+  ВСЕГО: 00:00
+</div>
+
+<div id="pwa-banner">
+  <span>УСТАНОВИТЬ НА ТЕЛЕФОН</span>
+  <button id="pwa-install-btn">УСТАНОВИТЬ</button>
+  <button class="pwa-dismiss" onclick="document.getElementById('pwa-banner').style.display='none'">✕</button>
+</div>
+
+<div id="idle-msg">ВЫ ЕЩЁ ЗДЕСЬ?<br>ОН ТОЖЕ.</div>
+<div id="konami-hint">↑ ↑ ↓ ↓ ← → ← → B A</div>
+
+<div id="emergency-exit">
+  <div id="ee-taskbar">
+    <span id="ee-clock">09:41</span>
+    <span id="ee-icons">🔋 📶 🔇</span>
+  </div>
+  <div id="ee-desktop">
+    <div id="ee-tint"></div>
+    <div class="ee-window" id="ee-excel">
+      <div class="ee-titlebar"><span>Книга1.xlsx — Excel</span><span class="ee-controls">─ □ ✕</span></div>
+      <div class="ee-content ee-spreadsheet">
+        <div class="ee-row ee-header"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span></div>
+        <div class="ee-row"><span class="ee-cell-num">1</span><span class="ee-cell active-cell">Продажи Q4</span><span class="ee-cell"></span><span class="ee-cell">₽124,500</span><span></span><span></span></div>
+        <div class="ee-row"><span class="ee-cell-num">2</span><span class="ee-cell"></span><span class="ee-cell">Январь</span><span class="ee-cell">₽41,200</span><span></span><span></span></div>
+        <div class="ee-row"><span class="ee-cell-num">3</span><span class="ee-cell"></span><span class="ee-cell">Февраль</span><span class="ee-cell">₽38,900</span><span></span><span></span></div>
+        <div class="ee-row"><span class="ee-cell-num">6</span><span class="ee-cell"></span><span class="ee-cell">ИТОГО</span><span class="ee-cell">₽124,500</span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="ee-news-card" style="top:20px;left:200px;width:260px;" onclick="openNews('https://tass.ru')">
+      <div class="ee-news-src">РКН — официально</div>
+      <div class="ee-news-title">Роскомнадзор внёс YouTube в реестр нарушителей. Замедление до 40 кб/с</div>
+    </div>
+    <div class="ee-news-card" style="top:130px;left:420px;width:240px;" onclick="openNews('https://meduza.io')">
+      <div class="ee-news-src">Медуза</div>
+      <div class="ee-news-title">Блогера из Екатеринбурга осудили на 2 года за репост в ВКонтакте</div>
+    </div>
+    <div class="ee-news-card" style="top:60px;left:470px;width:220px;" onclick="openNews('https://zona.media')">
+      <div class="ee-news-src">ОВД-Инфо</div>
+      <div class="ee-news-title">За 2023 год возбуждено 1400+ дел за публикации в соцсетях</div>
+    </div>
+    <div class="ee-news-card" style="top:290px;left:200px;width:250px;" onclick="openNews('https://rkn.gov.ru')">
+      <div class="ee-news-src">Роскомнадзор</div>
+      <div class="ee-news-title">Instagram* заблокирован на территории РФ. *признан экстремистской организацией</div>
+    </div>
+    <div class="ee-news-card" style="top:250px;left:460px;width:230px;" onclick="openNews('https://meduza.io')">
+      <div class="ee-news-src">Reuters</div>
+      <div class="ee-news-title">Россия замедлила Twitter до скорости dial-up. Пользователи обходят через VPN</div>
+    </div>
+    <div class="ee-news-card" style="top:350px;left:320px;width:240px;" onclick="openNews('https://zona.media')">
+      <div class="ee-news-src">Зона права</div>
+      <div class="ee-news-title">Пенсионер получил штраф 300 000 ₽ за лайк под «неправильным» постом</div>
+    </div>
+    <div class="ee-news-card" style="top:400px;left:100px;width:200px;" onclick="openNews('https://meduza.io')">
+      <div class="ee-news-src">NetBlocks</div>
+      <div class="ee-news-title">Россия вошла в топ-5 стран по числу интернет-блокировок</div>
+    </div>
+
+    <div class="ee-window" style="top:160px;left:20px;width:175px;">
+      <div class="ee-titlebar" style="background:linear-gradient(to right,#c00,#900);"><span>Лента.ру</span><span class="ee-controls">✕</span></div>
+      <div class="ee-content" style="padding:8px;background:#fff;font-size:9px;line-height:1.5;color:#111;">
+        <div style="font-weight:bold;margin-bottom:4px;">«Свободный интернет — это иллюзия»</div>
+        <div style="color:#999;font-size:8px;">мнение / общество</div>
+      </div>
+    </div>
+  </div>
+  <div id="ee-bleed-hint">нажми E (У) чтобы вернуться</div>
+</div>
+
+<div id="mobile-tutorial" style="display:none;">
+  <div class="tut-icon">📱</div>
+  <div class="tut-step" id="tut-text">ДОБРО ПОЖАЛОВАТЬ</div>
+  <button id="tut-btn" onclick="tutNext()">ДАЛЕЕ</button>
+</div>
+
+<div id="glitch-overlay"></div>
+<div id="tooltip"></div>
+
+<script src="js/app-state.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/visuals.js"></script>
+<script src="js/grid.js"></script>
+<script src="js/phases.js"></script>
+<script src="js/features.js"></script>
+<script src="js/events.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
