@@ -167,7 +167,7 @@ window.OMS = window.OMS || {};
 
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && S.currentPhase === 2) {
         e.preventDefault();
-        const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        const map = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
         OMS.features.moveSponsorCell(map[e.key][0], map[e.key][1]);
       }
 

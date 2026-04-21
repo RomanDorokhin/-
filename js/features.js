@@ -95,7 +95,7 @@ window.OMS = window.OMS || {};
 
   function paintQuestTarget(cells) {
     if (!S.sponsorQuest.active) return;
-    const idx = S.sponsorQuest.objective.y * 10 + S.sponsorQuest.objective.x;
+    const idx = S.sponsorQuest.food.y * 10 + S.sponsorQuest.food.x;
     const cell = cells[idx];
     if (!cell) return;
     clearQuestCellMark(cell);
@@ -107,7 +107,7 @@ window.OMS = window.OMS || {};
       font-size:10px; color:#ff0033; text-shadow:0 0 10px #ff0033;
       pointer-events:none; z-index:6; letter-spacing:0.05em;
     `;
-    marker.textContent = '◉';
+    marker.textContent = '✦';
     cell.appendChild(marker);
   }
 
@@ -169,8 +169,8 @@ window.OMS = window.OMS || {};
       ox = Math.floor(Math.random() * 10);
       oy = Math.floor(Math.random() * 10);
     } while (forbidden.has(oy * 10 + ox));
-    S.sponsorQuest.objective.x = ox;
-    S.sponsorQuest.objective.y = oy;
+    S.sponsorQuest.food.x = ox;
+    S.sponsorQuest.food.y = oy;
     document.body.classList.add('snake-mode');
     cells.forEach((cell) => {
       clearSponsorClickBindings(cell);
@@ -179,11 +179,28 @@ window.OMS = window.OMS || {};
     paintQuestTarget(cells);
     renderSnake(cells);
     updateSponsorQuestUi();
-    S.sponsorQuest.tickTimer = setInterval(() => {
-      tickSnake();
-    }, S.sponsorQuest.speedMs || 180);
+    const warning = document.createElement('div');
+    warning.id = 'sponsor-quest-warning';
+    warning.style.cssText = `
+      position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+      z-index:260;background:rgba(0,0,0,0.94);border:1px solid rgba(0,255,65,0.45);
+      box-shadow:0 0 30px rgba(0,255,65,0.22);padding:18px 26px;text-align:center;
+      font-family:'Share Tech Mono',monospace;letter-spacing:0.08em;color:#00ff41;
+    `;
+    warning.innerHTML = `
+      <div style="font-size:16px;">ВЫ ВОШЛИ В СЕКРЕТНЫЙ РЕЖИМ</div>
+      <div style="font-size:12px;margin-top:8px;opacity:0.85;">ЗМЕЙКА: НАБЕРИ 20 ОЧКОВ</div>
+      <div style="font-size:11px;margin-top:10px;opacity:0.65;">УПРАВЛЕНИЕ РЕВЕРСИВНОЕ</div>
+    `;
+    document.body.appendChild(warning);
+    setTimeout(() => {
+      if (warning.parentNode) warning.parentNode.removeChild(warning);
+      S.sponsorQuest.tickTimer = setInterval(() => {
+        tickSnake();
+      }, S.sponsorQuest.speedMs || 300);
+    }, 1200);
     if (R.statusLine) {
-      R.statusLine.textContent = 'СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА // СОБЕРИ 100 ОЧКОВ';
+      R.statusLine.textContent = 'СЕКРЕТНЫЙ РЕЖИМ: ЗМЕЙКА // СОБЕРИ 20 ОЧКОВ';
       R.statusLine.style.opacity = '1';
       setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2600);
     }
@@ -216,8 +233,8 @@ window.OMS = window.OMS || {};
       ox = Math.floor(Math.random() * 10);
       oy = Math.floor(Math.random() * 10);
     } while (occupied.has(oy * 10 + ox));
-    S.sponsorQuest.objective.x = ox;
-    S.sponsorQuest.objective.y = oy;
+    S.sponsorQuest.food.x = ox;
+    S.sponsorQuest.food.y = oy;
     paintQuestTarget(cells);
   }
 
@@ -256,7 +273,11 @@ window.OMS = window.OMS || {};
     S.sponsorQuest.snakeTail.push(nextIdx);
     S.sponsorGridX = nx;
     S.sponsorGridY = ny;
-    const hitFood = nx === S.sponsorQuest.objective.x && ny === S.sponsorQuest.objective.y;
+    const foodCell = cells[S.sponsorQuest.food.y * 10 + S.sponsorQuest.food.x];
+    if (foodCell && !foodCell.querySelector('.quest-target')) {
+      paintQuestTarget(cells);
+    }
+    const hitFood = nx === S.sponsorQuest.food.x && ny === S.sponsorQuest.food.y;
     if (hitFood) {
       S.sponsorQuest.score += 1;
       if (R.statusLine) {
