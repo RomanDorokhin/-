@@ -8,22 +8,33 @@ window.OMS = window.OMS || {};
   function showCasinoAd() {
     if (S.casinoShown || S.currentPhase !== 2) return;
     S.casinoShown = true;
-  const overlay = document.createElement('div');
-  overlay.id = 'casino-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:VT323,monospace;text-align:center;cursor:pointer;';
-  overlay.innerHTML = `
-    <div style="font-size:clamp(28px,5vw,52px);color:#ff0;letter-spacing:0.1em;animation:glitchText 0.5s infinite;">КАЗИНО</div>
-    <div style="font-size:clamp(16px,2.5vw,28px);color:#fff;letter-spacing:0.15em;">ВЫИГРАЙ МИЛЛИОН! 100% БОНУС!</div>
-    <div style="font-size:clamp(10px,1.4vw,14px);color:rgba(255,255,255,0.25);">[ нажми чтобы закрыть ]</div>
-  `;
-  overlay.addEventListener('click', () => {
-    overlay.remove();
-    S.casinoShown = false;
-  });
-  document.body.appendChild(overlay);
-  OMS.effects.triggerGlitch(260);
-  OMS.audioApi.playGlitchSound();
-  if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor' });
+    const overlay = document.createElement('div');
+    overlay.id = 'casino-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,170,0,0.08),rgba(0,0,0,0.95));backdrop-filter:blur(2px);z-index:700;display:flex;align-items:center;justify-content:center;padding:18px;font-family:VT323,monospace;text-align:center;cursor:pointer;';
+    overlay.innerHTML = `
+      <div style="width:min(640px,92vw);border:2px solid rgba(255,170,0,0.7);box-shadow:0 0 50px rgba(255,170,0,0.28), inset 0 0 30px rgba(255,170,0,0.12);background:linear-gradient(180deg,rgba(15,15,10,0.98),rgba(0,0,0,0.98));padding:20px 16px;">
+        <div style="font-size:clamp(14px,2vw,20px);color:rgba(255,255,255,0.55);letter-spacing:0.5em;margin-bottom:6px;">★ ПАРА-КЛУБ ★</div>
+        <div style="font-size:clamp(42px,9vw,100px);color:#ffea00;letter-spacing:0.08em;line-height:0.9;text-shadow:0 0 15px rgba(255,234,0,0.7),0 0 36px rgba(255,170,0,0.4);animation:glitchText 0.8s infinite;">КАЗИНО</div>
+        <div style="margin-top:10px;font-size:clamp(18px,3vw,34px);color:#fff;letter-spacing:0.14em;">ВЫИГРАЙ МИЛЛИОН! <span style="color:#ffea00;">100% БОНУС!</span></div>
+        <div style="margin-top:14px;font-size:clamp(11px,1.5vw,15px);color:rgba(255,255,255,0.35);letter-spacing:0.2em;">[ нажми чтобы закрыть ]</div>
+      </div>
+    `;
+    overlay.addEventListener('click', () => {
+      overlay.remove();
+      S.casinoShown = false;
+    });
+    document.body.appendChild(overlay);
+    OMS.effects.triggerGlitch(260);
+    OMS.audioApi.playGlitchSound();
+    if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor' });
+  }
+
+  function leaveSponsorTrace(cell) {
+    if (!cell) return;
+    const dot = document.createElement('span');
+    dot.className = 'sponsor-trace-dot';
+    cell.appendChild(dot);
+    setTimeout(() => dot.remove(), 950);
   }
 
   function injectSponsorCell() {
@@ -47,7 +58,10 @@ window.OMS = window.OMS || {};
   const cells = document.querySelectorAll('.noise-cell');
   const cols = 10;
   const oldIdx = S.sponsorGridY * cols + S.sponsorGridX;
-  if (cells[oldIdx]) cells[oldIdx].classList.remove('sponsor');
+  if (cells[oldIdx]) {
+    leaveSponsorTrace(cells[oldIdx]);
+    cells[oldIdx].classList.remove('sponsor');
+  }
   S.sponsorGridX = Math.max(0, Math.min(cols - 1, S.sponsorGridX + dx));
   S.sponsorGridY = Math.max(0, Math.min(9, S.sponsorGridY + dy));
   const newIdx = S.sponsorGridY * cols + S.sponsorGridX;
