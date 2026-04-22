@@ -254,6 +254,7 @@
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         cancelAnimationFrame(state.rafId);
+        if (OMS.features && OMS.features.pauseSponsorQuest) OMS.features.pauseSponsorQuest();
         if (OMS.audio.ctx && !state.isMuted) {
           try { OMS.audio.ctx.suspend(); } catch (e) {}
         }
@@ -262,6 +263,7 @@
         if (OMS.audio.ctx && !state.isMuted) {
           try { OMS.audio.ctx.resume(); } catch (e) {}
         }
+        if (OMS.features && OMS.features.resumeSponsorQuest) OMS.features.resumeSponsorQuest();
       }
     });
   }

@@ -53,6 +53,7 @@ window.OMS = window.OMS || {};
 
       cell.addEventListener('click', () => {
         if (S.currentPhase !== 2) return;
+        if (S.sponsorQuest.active) return;
         const content = getFlipContent();
         back.textContent = content.text;
         back.className = `cell-back${content.type === 'red' ? ' red' : ''}`;

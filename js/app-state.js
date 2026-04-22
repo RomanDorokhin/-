@@ -258,6 +258,7 @@ window.OMS = window.OMS || {};
       startTimer: null,
       completeTimer: null,
       statusTimer: null,
+      paused: false,
       speedMs: 320,
       lastTapAt: 0,
     },

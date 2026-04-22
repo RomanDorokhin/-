@@ -7,6 +7,7 @@ window.OMS = window.OMS || {};
   const U = OMS.utils;
 
   function showPhase(n) {
+    window.dispatchEvent(new CustomEvent('oms:phase-reset', { detail: { nextPhase: n } }));
     document.querySelectorAll('.phase').forEach((p, i) => p.classList.toggle('active', i === n));
     S.currentPhase = n;
   }

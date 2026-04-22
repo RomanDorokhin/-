@@ -28,6 +28,8 @@ window.OMS = window.OMS || {};
   }
 
   function setupInputHandlers() {
+    let sponsorTouchStart = null;
+
     document.addEventListener('mousemove', e => {
       S.lastActivity = Date.now();
       const controlScale = S.secretSystems.control.controlScale ?? 1;
@@ -49,12 +51,14 @@ window.OMS = window.OMS || {};
     });
 
     document.addEventListener('click', e => {
+      const cell = e.target.closest('.noise-cell');
+      if (cell && S.sponsorQuest.active) return;
+
       OMS.audioApi.initAudio();
       OMS.audioApi.playGlitchSound();
       OMS.effects.triggerGlitch(260);
       OMS.effects.spawnClickRipple(e.clientX, e.clientY);
 
-      const cell = e.target.closest('.noise-cell');
       if (cell && S.currentPhase === 2 && cell.dataset.loc === 'TOKYO') {
         S.tokyoClicks++;
         if (S.tokyoClicks >= 50 && !S.godzillaShown) {
@@ -288,6 +292,43 @@ window.OMS = window.OMS || {};
           try { OMS.audioApi.initAudio(); } catch (err) {}
           OMS.phases.goToPhase2();
         }
+      }, { passive: true });
+
+      document.addEventListener('touchstart', e => {
+        if (S.currentPhase !== 2 || !S.sponsorQuest.active) return;
+        const t = e.touches[0];
+        if (!t) return;
+        sponsorTouchStart = { x: t.clientX, y: t.clientY };
+      }, { passive: true });
+
+      document.addEventListener('touchend', e => {
+        if (S.currentPhase !== 2 || !S.sponsorQuest.active) {
+          sponsorTouchStart = null;
+          return;
+        }
+        const t = e.changedTouches[0];
+        if (!t || !sponsorTouchStart) {
+          sponsorTouchStart = null;
+          return;
+        }
+        const dx = t.clientX - sponsorTouchStart.x;
+        const dy = t.clientY - sponsorTouchStart.y;
+        sponsorTouchStart = null;
+
+        if (!S.sponsorQuest.ready) {
+          OMS.audioApi.initAudio();
+          OMS.features.beginSponsorQuestPlay();
+          return;
+        }
+
+        if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+
+        const swipe = Math.abs(dx) > Math.abs(dy)
+          ? { x: dx > 0 ? 1 : -1, y: 0 }
+          : { x: 0, y: dy > 0 ? 1 : -1 };
+
+        OMS.audioApi.initAudio();
+        OMS.features.moveSponsorCell(swipe.x, swipe.y);
       }, { passive: true });
     }
   }

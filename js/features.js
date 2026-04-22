@@ -51,9 +51,23 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
 
   function clearSponsorQuestUi() {
+    clearSponsorQuestWarning();
     const panel = document.getElementById('sponsor-quest-panel');
     if (panel) panel.remove();
     document.body.classList.remove('snake-mode');
+  }
+
+  function restoreCellLabel(cell) {
+    if (!cell) return;
+    const lbl = cell.querySelector('.cell-label');
+    if (lbl) lbl.textContent = cell.dataset.loc || '';
+  }
+
+  function clearSponsorTrail() {
+    while (sponsorTrail.length) {
+      const trail = sponsorTrail.pop();
+      if (trail && trail.el && trail.el.parentNode) trail.el.parentNode.removeChild(trail.el);
+    }
   }
 
   function getSnakeBrightness(score = S.sponsorQuest.score) {
@@ -110,6 +124,21 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (warning) warning.remove();
   }
 
+  function stopSponsorQuestLoop() {
+    if (S.sponsorQuest.tickTimer) {
+      clearInterval(S.sponsorQuest.tickTimer);
+      S.sponsorQuest.tickTimer = null;
+    }
+  }
+
+  function startSponsorQuestLoop() {
+    if (!S.sponsorQuest.active || !S.sponsorQuest.ready || S.sponsorQuest.paused) return;
+    if (S.sponsorQuest.tickTimer) return;
+    S.sponsorQuest.tickTimer = setInterval(() => {
+      tickSnake();
+    }, S.sponsorQuest.speedMs || 300);
+  }
+
   function handleSponsorQuestOverlayKey(event) {
     if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
     if (event.defaultPrevented) return;
@@ -131,17 +160,26 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function beginSponsorQuestPlay() {
     if (!S.sponsorQuest.active || S.sponsorQuest.ready) return;
     clearSponsorQuestWarning();
-    if (S.sponsorQuest.tickTimer) {
-      clearInterval(S.sponsorQuest.tickTimer);
-      S.sponsorQuest.tickTimer = null;
-    }
+    stopSponsorQuestLoop();
     S.sponsorQuest.ready = true;
+    S.sponsorQuest.paused = false;
     OMS.audioApi.startSnakeMode();
-    S.sponsorQuest.tickTimer = setInterval(() => {
-      tickSnake();
-    }, S.sponsorQuest.speedMs || 300);
+    startSponsorQuestLoop();
     OMS.audioApi.playSnakeTurnCue();
     setSnakeStatus('РЕЖИМ ЗАПУЩЕН // ИЩИ ДОБЫЧУ', 1800);
+  }
+
+  function pauseSponsorQuest() {
+    if (!S.sponsorQuest.active || !S.sponsorQuest.ready || S.sponsorQuest.paused) return;
+    S.sponsorQuest.paused = true;
+    stopSponsorQuestLoop();
+  }
+
+  function resumeSponsorQuest() {
+    if (!S.sponsorQuest.active || !S.sponsorQuest.ready || !S.sponsorQuest.paused) return;
+    if (document.hidden || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    S.sponsorQuest.paused = false;
+    startSponsorQuestLoop();
   }
 
   function buildSnakeFailureMessage(prefix) {
@@ -226,7 +264,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     cell.appendChild(marker);
   }
 
-  function resetSponsorQuest(reason = '') {
+  function resetSponsorQuest(reason = '', options = {}) {
+    const suppressStatus = options.suppressStatus === true;
     clearTimeout(S.sponsorQuest.startTimer);
     clearTimeout(S.sponsorQuest.completeTimer);
     clearTimeout(S.sponsorQuest.statusTimer);
@@ -240,16 +279,16 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.sponsorQuest.directionY = 0;
     S.sponsorQuest.intentX = 0;
     S.sponsorQuest.intentY = 0;
-    if (S.sponsorQuest.tickTimer) {
-      clearInterval(S.sponsorQuest.tickTimer);
-      S.sponsorQuest.tickTimer = null;
-    }
+    S.sponsorQuest.paused = false;
+    stopSponsorQuestLoop();
     const cells = document.querySelectorAll('.noise-cell');
-  clearQuestMarks(cells);
+    clearQuestMarks(cells);
+    clearSponsorTrail();
     cells.forEach((cell) => {
-      cell.classList.remove('sponsor-tail', 'sponsor-head', 'snake-complete');
+      cell.classList.remove('sponsor', 'sponsor-tail', 'sponsor-head', 'snake-complete');
       clearSnakeCellVisual(cell);
       clearSponsorClickBindings(cell);
+      restoreCellLabel(cell);
     });
     const baseIdx = 42;
     const baseCell = cells[baseIdx];
@@ -263,7 +302,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.sponsorGridY = 4;
     OMS.audioApi.stopSnakeMode();
     updateSponsorQuestUi();
-    if (reason && R.statusLine && S.currentPhase >= 1) {
+    if (reason && !suppressStatus && R.statusLine && S.currentPhase >= 1) {
       R.statusLine.textContent = reason;
       R.statusLine.style.opacity = '1';
       setTimeout(() => { R.statusLine.style.opacity = '0'; }, 1800);
@@ -274,12 +313,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const cells = document.querySelectorAll('.noise-cell');
     if (!cells.length || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
     clearSponsorQuestWarning();
-    if (S.sponsorQuest.tickTimer) {
-      clearInterval(S.sponsorQuest.tickTimer);
-      S.sponsorQuest.tickTimer = null;
-    }
+    stopSponsorQuestLoop();
     S.sponsorQuest.active = true;
     S.sponsorQuest.ready = false;
+    S.sponsorQuest.paused = false;
     S.sponsorQuest.score = 0;
     S.sponsorQuest.snakeTail = [S.sponsorGridY * 10 + S.sponsorGridX];
     S.sponsorQuest.directionX = 0;
@@ -318,7 +355,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         <div class="snake-start-rules">
           <div class="snake-start-rules-title">УПРАВЛЕНИЕ</div>
           <div class="snake-start-rules-copy">
-            Стрелки или <b>WASD</b>.<br>
+            Стрелки, <b>WASD</b> или свайпы.<br>
             Оно будет странным, придется привыкнуть.
           </div>
         </div>
@@ -350,6 +387,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     all.forEach((cell) => {
       cell.classList.remove('sponsor', 'sponsor-head', 'sponsor-tail');
       clearSnakeCellVisual(cell);
+      restoreCellLabel(cell);
     });
     const body = S.sponsorQuest.snakeTail;
     const tone = getSnakeBrightness();
@@ -384,8 +422,12 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
 
   function tickSnake() {
-    if (!S.sponsorQuest.active || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
-    if (!S.sponsorQuest.ready) return;
+    if (!S.sponsorQuest.active) return;
+    if (S.currentPhase !== 2 || S.lifetimeLimitReached) {
+      resetSponsorQuest('', { suppressStatus: true });
+      return;
+    }
+    if (!S.sponsorQuest.ready || S.sponsorQuest.paused) return;
     const cells = document.querySelectorAll('.noise-cell');
     if (!cells.length) return;
 
@@ -685,10 +727,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function leaveSponsorTrace(cell) {
     if (!cell) return;
     const star = document.createElement('div');
-    star.style.cssText = `
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      font-size:8px; color:#ffaa00; opacity:0.6; pointer-events:none; z-index:5;
-    `;
+    star.className = 'sponsor-trace-star';
     star.textContent = '★';
     cell.appendChild(star);
     sponsorTrail.push({ el: star, cell });
@@ -741,12 +780,12 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       return;
     }
     if (!S.sponsorQuest.ready) return;
-  const reversedX = dx * -1;
-  const reversedY = dy * -1;
-  if (reversedX === 0 && reversedY === 0) return;
-  if (!canQueueSnakeTurn(reversedX, reversedY)) return;
-  S.sponsorQuest.intentX = reversedX;
-  S.sponsorQuest.intentY = reversedY;
+    const reversedX = dx * -1;
+    const reversedY = dy * -1;
+    if (reversedX === 0 && reversedY === 0) return;
+    if (!canQueueSnakeTurn(reversedX, reversedY)) return;
+    S.sponsorQuest.intentX = reversedX;
+    S.sponsorQuest.intentY = reversedY;
     OMS.audioApi.playSnakeTurnCue();
   }
 
@@ -977,10 +1016,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     });
   }
 
-  // Keep sponsor quest state tidy when phases reset.
   window.addEventListener('oms:phase-reset', () => {
     if (S.sponsorQuest.active) {
-      resetSponsorQuest();
+      resetSponsorQuest('', { suppressStatus: true });
     } else {
       clearSponsorQuestUi();
     }
@@ -990,6 +1028,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     showCasinoAd,
     beginSponsorQuestPlay,
     moveSponsorCell,
+    pauseSponsorQuest,
+    resumeSponsorQuest,
     resetSponsorQuest,
     showGodzilla,
     triggerScreamer,
