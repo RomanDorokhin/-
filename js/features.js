@@ -89,6 +89,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ],
       secret: { r: 2, c: 11 },
       guards: [{ r: 6, c: 7 }],
+      switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
       plans: null,
       exit: null,
     },
@@ -107,6 +108,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ],
       secret: { r: 1, c: 11 },
       guards: [{ r: 5, c: 7 }, { r: 7, c: 3 }],
+      switches: [{ r: 7, c: 8, doors: [{ r: 4, c: 6 }] }],
       plans: null,
       exit: null,
     },
@@ -125,6 +127,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ],
       secret: { r: 3, c: 11 },
       guards: [{ r: 1, c: 5 }, { r: 7, c: 7 }, { r: 5, c: 1 }],
+      switches: [{ r: 5, c: 9, doors: [{ r: 4, c: 8 }] }],
       plans: null,
       exit: null,
     },
@@ -143,6 +146,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ],
       secret: { r: 2, c: 11 },
       guards: [{ r: 1, c: 6 }, { r: 5, c: 4 }, { r: 7, c: 6 }, { r: 3, c: 8 }],
+      switches: [{ r: 3, c: 6, doors: [{ r: 4, c: 6 }] }],
       plans: null,
       exit: null,
     },
@@ -161,6 +165,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ],
       secret: null,
       guards: [{ r: 1, c: 9 }, { r: 5, c: 6 }],
+      switches: [{ r: 5, c: 4, doors: [{ r: 4, c: 8 }] }],
       plans: { r: 3, c: 9 },
       exit: { r: 7, c: 10 },
     },
@@ -195,8 +200,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function inagentWall(r, c) {
     if (inagentIsSecret(r, c)) return false;
     if (r < 0 || r >= INAGENT_ROWS || c < 0 || c >= INAGENT_COLS) return true;
+    if (S.inagent.openDoors.some((door) => door.r === r && door.c === c)) return false;
     const row = inagentLevel().map[r];
     return !row || row[c] === '#';
+  }
+
+  function inagentSwitchAt(r, c) {
+    const switches = inagentLevel().switches || [];
+    return switches.find((entry) => entry.r === r && entry.c === c) || null;
   }
 
   function updateInagentHud() {
@@ -204,15 +215,20 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const lvl = inagentLevel();
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
-    R.inagentHudState.textContent = lvl.plans ? (S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?') : '';
+    if (lvl.plans) R.inagentHudState.textContent = S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?';
+    else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `ДВЕРИ: ${S.inagent.doorTimer}`;
+    else R.inagentHudState.textContent = '';
     if (S.inagent.flashTimer > 0) {
       R.inagentMsg.textContent = S.inagent.flashMsg;
       R.inagentMsg.style.color = '#ffcc00';
+    } else if (S.inagent.openDoors.length) {
+      R.inagentMsg.textContent = 'ПУТЬ ОТКРЫТ // ОХРАНА ОТВЛЕЧЕНА';
+      R.inagentMsg.style.color = '#7ee6ff';
     } else if (lvl.plans) {
       R.inagentMsg.textContent = S.inagent.hasPlans ? 'БЕГИ К ВЫХОДУ!' : 'НАЙДИ ПЛАНЫ [?]';
       R.inagentMsg.style.color = '#c8ff0055';
     } else {
-      R.inagentMsg.textContent = 'НАЙДИ ТАЙНЫЙ ПРОХОД';
+      R.inagentMsg.textContent = (lvl.switches && lvl.switches.length) ? 'ИЩИ ПУЛЬТ И ТАЙНЫЙ ПРОХОД' : 'НАЙДИ ТАЙНЫЙ ПРОХОД';
       R.inagentMsg.style.color = '#c8ff0033';
     }
   }
@@ -225,13 +241,16 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     ctx.fillRect(0, 0, R.inagentCanvas.width, R.inagentCanvas.height);
     const lvl = inagentLevel();
     const secretPulse = 0.5 + 0.5 * Math.sin(Date.now() / 900);
+    const switchPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420);
     for (let r = 0; r < INAGENT_ROWS; r++) {
       for (let c = 0; c < INAGENT_COLS; c++) {
         const x = c * INAGENT_CELL;
         const y = r * INAGENT_CELL;
         const row = lvl.map[r];
+        const doorOpen = S.inagent.openDoors.some((door) => door.r === r && door.c === c);
+        const switchNode = inagentSwitchAt(r, c);
         const isWallCell = !row || row[c] === '#';
-        if (isWallCell || inagentIsSecret(r, c)) {
+        if ((isWallCell && !doorOpen) || inagentIsSecret(r, c)) {
           ctx.fillStyle = '#0d1a05';
           ctx.fillRect(x, y, INAGENT_CELL, INAGENT_CELL);
           ctx.strokeStyle = '#c8ff0018';
@@ -258,6 +277,24 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           ctx.strokeStyle = '#c8ff0008';
           ctx.lineWidth = 0.5;
           ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
+          if (doorOpen) {
+            ctx.fillStyle = 'rgba(126,230,255,0.08)';
+            ctx.fillRect(x + 1, y + 1, INAGENT_CELL - 2, INAGENT_CELL - 2);
+            ctx.strokeStyle = 'rgba(126,230,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 8.5, y + 8.5, INAGENT_CELL - 17, INAGENT_CELL - 17);
+          }
+        }
+
+        if (switchNode) {
+          ctx.fillStyle = `rgba(126,230,255,${0.16 + switchPulse * 0.18})`;
+          ctx.fillRect(x + 10, y + 10, INAGENT_CELL - 20, INAGENT_CELL - 20);
+          ctx.strokeStyle = `rgba(126,230,255,${0.34 + switchPulse * 0.26})`;
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(x + 10.5, y + 10.5, INAGENT_CELL - 21, INAGENT_CELL - 21);
+          ctx.fillStyle = '#7ee6ff';
+          ctx.font = 'bold 8px monospace';
+          ctx.fillText('SW', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
         }
       }
     }
@@ -319,6 +356,21 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
 
   function moveInagentGuard(guard) {
+    if (S.inagent.decoyTarget) {
+      const dr = S.inagent.decoyTarget.r - guard.r;
+      const dc = S.inagent.decoyTarget.c - guard.c;
+      const options = Math.abs(dr) >= Math.abs(dc)
+        ? [[Math.sign(dr), 0], [0, Math.sign(dc)]]
+        : [[0, Math.sign(dc)], [Math.sign(dr), 0]];
+      for (const [mr, mc] of options) {
+        if (mr === 0 && mc === 0) continue;
+        if (!inagentWall(guard.r + mr, guard.c + mc)) {
+          guard.r += mr;
+          guard.c += mc;
+          return;
+        }
+      }
+    }
     const dr = S.inagent.player.r - guard.r;
     const dc = S.inagent.player.c - guard.c;
     const options = Math.abs(dr) >= Math.abs(dc)
@@ -336,6 +388,24 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   function inagentHit() {
     return S.inagent.guards.some((guard) => guard.r === S.inagent.player.r && guard.c === S.inagent.player.c);
+  }
+
+  function tickInagentDoorState() {
+    if (S.inagent.doorTimer > 0) {
+      S.inagent.doorTimer -= 1;
+      if (S.inagent.doorTimer <= 0) {
+        S.inagent.openDoors = [];
+        S.inagent.decoyTarget = null;
+      }
+    }
+  }
+
+  function activateInagentSwitch(switchNode) {
+    if (!switchNode) return;
+    S.inagent.openDoors = (switchNode.doors || []).map((door) => ({ ...door }));
+    S.inagent.doorTimer = 5;
+    S.inagent.decoyTarget = { r: switchNode.r, c: switchNode.c };
+    flashInagent('ПУЛЬТ АКТИВЕН — ДВЕРЬ ОТКРЫТА, ОХРАНА ОТВЛЕЧЕНА');
   }
 
   function showInagentTransition(nextLevel) {
@@ -373,6 +443,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.state = 'play';
     S.inagent.flashMsg = '';
     S.inagent.flashTimer = 0;
+    S.inagent.openDoors = [];
+    S.inagent.doorTimer = 0;
+    S.inagent.decoyTarget = null;
     setInagentScreen(null);
     drawInagent();
     updateInagentHud();
@@ -394,15 +467,18 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.moves += 1;
 
     const lvl = inagentLevel();
+    const switchNode = inagentSwitchAt(nr, nc);
     if (lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
       S.inagent.hasPlans = true;
       flashInagent('ПЛАНЫ ПОЛУЧЕНЫ — БЕГИ К ВЫХОДУ!');
     }
+    if (switchNode) activateInagentSwitch(switchNode);
     if (lvl.exit && S.inagent.hasPlans && nr === lvl.exit.r && nc === lvl.exit.c) {
       showInagentEnd(true);
       updateInagentHud();
       return;
     }
+    tickInagentDoorState();
     S.inagent.guards.forEach(moveInagentGuard);
     if (inagentHit()) {
       showInagentEnd(false);

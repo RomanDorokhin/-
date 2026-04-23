@@ -295,6 +295,9 @@ window.OMS = window.OMS || {};
       moves: 0,
       flashMsg: '',
       flashTimer: 0,
+      openDoors: [],
+      doorTimer: 0,
+      decoyTarget: null,
       transitionTimer: null,
     },
     secretSystems: {
