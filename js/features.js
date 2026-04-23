@@ -70,6 +70,386 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
   }
 
+  const INAGENT_CELL = 40;
+  const INAGENT_COLS = 12;
+  const INAGENT_ROWS = 10;
+  const INAGENT_LEVELS = [
+    {
+      map: [
+        '############',
+        '#..........#',
+        '#.##.##....#',
+        '#.#..#.....#',
+        '#.#..#######',
+        '#..........#',
+        '##.####.#.##',
+        '#......#...#',
+        '#.######...#',
+        '############',
+      ],
+      secret: { r: 2, c: 11 },
+      guards: [{ r: 6, c: 5 }],
+      plans: null,
+      exit: null,
+    },
+    {
+      map: [
+        '############',
+        '#..#.......#',
+        '#..#.#####.#',
+        '#..#.......#',
+        '#..#######.#',
+        '#..........#',
+        '#.########.#',
+        '#..........#',
+        '###.######.#',
+        '############',
+      ],
+      secret: { r: 1, c: 11 },
+      guards: [{ r: 5, c: 7 }, { r: 7, c: 3 }],
+      plans: null,
+      exit: null,
+    },
+    {
+      map: [
+        '############',
+        '#.#.......##',
+        '#.#.#####.##',
+        '#.#.#.....##',
+        '#.#.#.###.##',
+        '#...#.#....#',
+        '#####.#.##.#',
+        '#.....#....#',
+        '#.#####.##.#',
+        '############',
+      ],
+      secret: { r: 3, c: 11 },
+      guards: [{ r: 1, c: 5 }, { r: 7, c: 7 }, { r: 5, c: 1 }],
+      plans: null,
+      exit: null,
+    },
+    {
+      map: [
+        '############',
+        '#..........#',
+        '####.#####.#',
+        '#..#.....#.#',
+        '#..#.###.#.#',
+        '#..#.#.#.#.#',
+        '#....#.#...#',
+        '#.####.#####',
+        '#..........#',
+        '############',
+      ],
+      secret: { r: 2, c: 11 },
+      guards: [{ r: 1, c: 6 }, { r: 5, c: 5 }, { r: 7, c: 3 }, { r: 3, c: 9 }],
+      plans: null,
+      exit: null,
+    },
+    {
+      map: [
+        '############',
+        '#..........#',
+        '#.##.####.##',
+        '#.#........#',
+        '#.#.######.#',
+        '#..........#',
+        '##.######.##',
+        '#..........#',
+        '#.########.#',
+        '############',
+      ],
+      secret: null,
+      guards: [{ r: 1, c: 9 }, { r: 5, c: 6 }],
+      plans: { r: 3, c: 9 },
+      exit: { r: 7, c: 10 },
+    },
+  ];
+
+  function inagentLevel() {
+    return INAGENT_LEVELS[S.inagent.level];
+  }
+
+  function setInagentScreen(mode) {
+    if (R.inagentStartScreen) R.inagentStartScreen.classList.toggle('active', mode === 'intro');
+    if (R.inagentEndScreen) R.inagentEndScreen.classList.toggle('active', mode === 'end');
+    if (R.inagentTransScreen) R.inagentTransScreen.classList.toggle('active', mode === 'trans');
+  }
+
+  function closeInagent({ silent = false } = {}) {
+    if (!S.inagent.open) return;
+    S.inagent.open = false;
+    S.inagent.state = 'intro';
+    const overlay = R.inagentOverlay;
+    if (overlay) overlay.classList.remove('open');
+    if (overlay) overlay.setAttribute('aria-hidden', 'true');
+    setInagentScreen('intro');
+    if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
+  }
+
+  function inagentIsSecret(r, c) {
+    const secret = inagentLevel().secret;
+    return !!secret && secret.r === r && secret.c === c;
+  }
+
+  function inagentWall(r, c) {
+    if (inagentIsSecret(r, c)) return false;
+    if (r < 0 || r >= INAGENT_ROWS || c < 0 || c >= INAGENT_COLS) return true;
+    const row = inagentLevel().map[r];
+    return !row || row[c] === '#';
+  }
+
+  function updateInagentHud() {
+    if (!R.inagentHudSector || !R.inagentHudMoves || !R.inagentHudState || !R.inagentMsg) return;
+    const lvl = inagentLevel();
+    R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
+    R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
+    R.inagentHudState.textContent = lvl.plans ? (S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?') : '';
+    if (S.inagent.flashTimer > 0) {
+      R.inagentMsg.textContent = S.inagent.flashMsg;
+      R.inagentMsg.style.color = '#ffcc00';
+    } else if (lvl.plans) {
+      R.inagentMsg.textContent = S.inagent.hasPlans ? 'БЕГИ К ВЫХОДУ!' : 'НАЙДИ ПЛАНЫ [?]';
+      R.inagentMsg.style.color = '#c8ff0055';
+    } else {
+      R.inagentMsg.textContent = 'НАЙДИ ТАЙНЫЙ ПРОХОД';
+      R.inagentMsg.style.color = '#c8ff0033';
+    }
+  }
+
+  function drawInagent() {
+    if (!R.inagentCanvas) return;
+    const ctx = R.inagentCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, R.inagentCanvas.width, R.inagentCanvas.height);
+    const lvl = inagentLevel();
+    for (let r = 0; r < INAGENT_ROWS; r++) {
+      for (let c = 0; c < INAGENT_COLS; c++) {
+        const x = c * INAGENT_CELL;
+        const y = r * INAGENT_CELL;
+        const row = lvl.map[r];
+        const isWallCell = !row || row[c] === '#';
+        if (isWallCell || inagentIsSecret(r, c)) {
+          ctx.fillStyle = '#0d1a05';
+          ctx.fillRect(x, y, INAGENT_CELL, INAGENT_CELL);
+          ctx.strokeStyle = '#c8ff0018';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
+          ctx.strokeStyle = '#c8ff000c';
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + INAGENT_CELL, y + INAGENT_CELL);
+          ctx.moveTo(x + INAGENT_CELL, y);
+          ctx.lineTo(x, y + INAGENT_CELL);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#080808';
+          ctx.fillRect(x, y, INAGENT_CELL, INAGENT_CELL);
+          ctx.strokeStyle = '#c8ff0008';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
+        }
+      }
+    }
+
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (lvl.plans && !S.inagent.hasPlans) {
+      const x = lvl.plans.c * INAGENT_CELL;
+      const y = lvl.plans.r * INAGENT_CELL;
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath();
+      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+    }
+
+    if (lvl.exit) {
+      const ex = lvl.exit.c * INAGENT_CELL;
+      const ey = lvl.exit.r * INAGENT_CELL;
+      const exitColor = S.inagent.hasPlans ? '#c8ff00' : '#c8ff0033';
+      ctx.strokeStyle = exitColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(ex + 6, ey + 6, INAGENT_CELL - 12, INAGENT_CELL - 12);
+      ctx.fillStyle = exitColor;
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText('EXIT', ex + INAGENT_CELL / 2, ey + INAGENT_CELL / 2 + 1);
+    }
+
+    lvl.guards = S.inagent.guards;
+    S.inagent.guards.forEach((guard) => {
+      const x = guard.c * INAGENT_CELL;
+      const y = guard.r * INAGENT_CELL;
+      ctx.fillStyle = '#ff3030';
+      ctx.beginPath();
+      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('G', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+    });
+
+    const px = S.inagent.player.c * INAGENT_CELL;
+    const py = S.inagent.player.r * INAGENT_CELL;
+    ctx.fillStyle = '#c8ff00';
+    ctx.beginPath();
+    ctx.arc(px + INAGENT_CELL / 2, py + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('P', px + INAGENT_CELL / 2, py + INAGENT_CELL / 2 + 1);
+  }
+
+  function flashInagent(msg) {
+    S.inagent.flashMsg = msg;
+    S.inagent.flashTimer = 10;
+  }
+
+  function moveInagentGuard(guard) {
+    const dr = S.inagent.player.r - guard.r;
+    const dc = S.inagent.player.c - guard.c;
+    const options = Math.abs(dr) >= Math.abs(dc)
+      ? [[Math.sign(dr), 0], [0, Math.sign(dc)]]
+      : [[0, Math.sign(dc)], [Math.sign(dr), 0]];
+    for (const [mr, mc] of options) {
+      if (mr === 0 && mc === 0) continue;
+      if (!inagentWall(guard.r + mr, guard.c + mc)) {
+        guard.r += mr;
+        guard.c += mc;
+        return;
+      }
+    }
+  }
+
+  function inagentHit() {
+    return S.inagent.guards.some((guard) => guard.r === S.inagent.player.r && guard.c === S.inagent.player.c);
+  }
+
+  function showInagentTransition(nextLevel) {
+    S.inagent.state = 'trans';
+    setInagentScreen('trans');
+    if (R.inagentTransText) {
+      R.inagentTransText.innerHTML = `СЕКТОР ${nextLevel} ПРОЙДЕН<br><span style="color:#c8ff0055;font-size:11px">ТЫ ПРОНИКАЕШЬ ГЛУБЖЕ В ЗАМОК...</span><br><span style="color:#c8ff0033;font-size:10px">СЕКТОР ${nextLevel + 1} / ${INAGENT_LEVELS.length}</span>`;
+    }
+    setTimeout(() => {
+      initInagent(nextLevel);
+    }, 1800);
+  }
+
+  function showInagentEnd(won) {
+    S.inagent.state = won ? 'win' : 'dead';
+    drawInagent();
+    setInagentScreen('end');
+    if (R.inagentEndTitle) {
+      R.inagentEndTitle.textContent = won ? 'ПОБЕГ УДАЛСЯ' : 'ПОЙМАЛИ';
+      R.inagentEndTitle.style.color = won ? '#c8ff00' : '#ff3030';
+    }
+    if (R.inagentEndMoves) R.inagentEndMoves.textContent = `ВСЕГО ХОДОВ: ${S.inagent.moves}`;
+    if (won) {
+      if (OMS.secrets) OMS.secrets.unlockSecret('inagent', { source: 'inagent_escape' });
+      setSnakeStatus('ИНАГЕНТ ПРОЙДЕН // СЕКРЕТ СОХРАНЕН', 1800);
+    }
+  }
+
+  function initInagent(level = 0) {
+    S.inagent.level = level;
+    S.inagent.player = { r: 1, c: 1 };
+    S.inagent.guards = inagentLevel().guards.map((guard) => ({ ...guard }));
+    S.inagent.hasPlans = false;
+    S.inagent.moves = 0;
+    S.inagent.state = 'play';
+    S.inagent.flashMsg = '';
+    S.inagent.flashTimer = 0;
+    setInagentScreen(null);
+    drawInagent();
+    updateInagentHud();
+  }
+
+  function stepInagent(dr, dc) {
+    if (!S.inagent.open || S.inagent.state !== 'play') return;
+    const nr = S.inagent.player.r + dr;
+    const nc = S.inagent.player.c + dc;
+    if (inagentIsSecret(nr, nc)) {
+      S.inagent.moves += 1;
+      updateInagentHud();
+      showInagentTransition(S.inagent.level + 1);
+      return;
+    }
+    if (inagentWall(nr, nc)) return;
+    S.inagent.player.r = nr;
+    S.inagent.player.c = nc;
+    S.inagent.moves += 1;
+
+    const lvl = inagentLevel();
+    if (lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
+      S.inagent.hasPlans = true;
+      flashInagent('ПЛАНЫ ПОЛУЧЕНЫ — БЕГИ К ВЫХОДУ!');
+    }
+    if (lvl.exit && S.inagent.hasPlans && nr === lvl.exit.r && nc === lvl.exit.c) {
+      showInagentEnd(true);
+      updateInagentHud();
+      return;
+    }
+    S.inagent.guards.forEach(moveInagentGuard);
+    if (inagentHit()) {
+      showInagentEnd(false);
+      updateInagentHud();
+      return;
+    }
+    if (S.inagent.flashTimer > 0) S.inagent.flashTimer -= 1;
+    drawInagent();
+    updateInagentHud();
+  }
+
+  function openInagentMode() {
+    if (S.currentPhase < 1 || S.lifetimeLimitReached || !R.inagentOverlay) return;
+    S.inagent.open = true;
+    R.inagentOverlay.classList.add('open');
+    R.inagentOverlay.setAttribute('aria-hidden', 'false');
+    S.inagent.state = 'intro';
+    setInagentScreen('intro');
+    drawInagent();
+    updateInagentHud();
+    setSnakeStatus('ИНАГЕНТ // НАЖМИ B ЕЩЁ РАЗ ИЛИ КНОПКУ СТАРТА', 1800);
+  }
+
+  function toggleInagentMode() {
+    if (S.inagent.open) {
+      closeInagent();
+      return;
+    }
+    openInagentMode();
+  }
+
+  function handleInagentKey(event) {
+    if (!S.inagent.open) return false;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeInagent();
+      return true;
+    }
+    if (event.key === 'r' || event.key === 'R' || event.key === 'к' || event.key === 'К') {
+      event.preventDefault();
+      initInagent(0);
+      return true;
+    }
+    const move = {
+      ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0], ц: [-1, 0], Ц: [-1, 0],
+      ArrowDown: [1, 0], s: [1, 0], S: [1, 0], ы: [1, 0], Ы: [1, 0],
+      ArrowLeft: [0, -1], a: [0, -1], A: [0, -1], ф: [0, -1], Ф: [0, -1],
+      ArrowRight: [0, 1], d: [0, 1], D: [0, 1], в: [0, 1], В: [0, 1],
+    }[event.key];
+    if (!move) return false;
+    event.preventDefault();
+    stepInagent(move[0], move[1]);
+    return true;
+  }
+
   function getSnakeBrightness(score = S.sponsorQuest.score) {
     const ratio = Math.max(0, Math.min(1, score / S.sponsorQuest.targetScore));
     return 110 + Math.round(ratio * 145);
@@ -1014,6 +1394,22 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       R.emergencyTint.style.opacity = String(bleed);
       if (bleed >= 0.85) setTimeout(() => { if (S.eeActive) toggleEmergencyExit(); }, 400);
     });
+
+    if (R.inagentStartBtn) {
+      R.inagentStartBtn.addEventListener('click', () => {
+        initInagent(0);
+      });
+    }
+    if (R.inagentRestartBtn) {
+      R.inagentRestartBtn.addEventListener('click', () => {
+        initInagent(0);
+      });
+    }
+    if (R.inagentCloseBtn) {
+      R.inagentCloseBtn.addEventListener('click', () => {
+        closeInagent();
+      });
+    }
   }
 
   window.addEventListener('oms:phase-reset', () => {
@@ -1035,6 +1431,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     triggerScreamer,
     triggerPhoneMeme,
     triggerRansheByloLuchshe,
+    openInagentMode,
+    toggleInagentMode,
+    closeInagent,
+    handleInagentKey,
     showAccusationMsg,
     applyVariableReinforcement,
     openNews,

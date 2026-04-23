@@ -156,7 +156,13 @@ window.OMS = window.OMS || {};
           S.ebtState = 'b';
           if (OMS.secrets) OMS.secrets.unlockSecret('ebat_b', { source: 'ebat_sequence' });
           OMS.features.triggerScreamer();
-        } else S.ebtState = '';
+        } else {
+          S.ebtState = '';
+          if (S.currentPhase >= 1 && OMS.features && OMS.features.toggleInagentMode) {
+            e.preventDefault();
+            OMS.features.toggleInagentMode();
+          }
+        }
         return;
       }
       if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') {
