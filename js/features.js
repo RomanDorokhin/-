@@ -90,7 +90,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 2, c: 11 },
       guards: [{ r: 6, c: 7 }],
       switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
-      pickup: { r: 7, c: 2, kind: 'phase' },
+      pickups: [
+        { r: 7, c: 2, kind: 'phase' },
+        { r: 5, c: 3, kind: 'mine' },
+      ],
+      flamers: [
+        { r: 1, c: 11, dir: 'left', len: 4, period: 5, on: 2, phase: 2 },
+        { r: 7, c: 0, dir: 'right', len: 4, period: 6, on: 2, phase: 0 },
+      ],
       plans: null,
       exit: null,
     },
@@ -110,6 +117,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 1, c: 11 },
       guards: [{ r: 5, c: 6 }, { r: 7, c: 3 }],
       switches: [{ r: 7, c: 8, doors: [{ r: 4, c: 6 }] }],
+      pickups: [
+        { r: 5, c: 2, kind: 'mine' },
+        { r: 7, c: 6, kind: 'emp' },
+      ],
+      flamers: [
+        { r: 1, c: 11, dir: 'left', len: 6, period: 5, on: 2, phase: 1 },
+        { r: 7, c: 0, dir: 'right', len: 5, period: 4, on: 1, phase: 0 },
+      ],
       plans: null,
       exit: null,
     },
@@ -129,6 +144,15 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 3, c: 11 },
       guards: [{ r: 1, c: 5 }, { r: 7, c: 7 }, { r: 5, c: 1 }],
       switches: [{ r: 5, c: 9, doors: [{ r: 4, c: 8 }] }],
+      pickups: [
+        { r: 7, c: 2, kind: 'mine' },
+        { r: 5, c: 1, kind: 'medkit' },
+        { r: 1, c: 8, kind: 'emp' },
+      ],
+      flamers: [
+        { r: 7, c: 11, dir: 'left', len: 3, period: 4, on: 2, phase: 1 },
+        { r: 5, c: 11, dir: 'left', len: 4, period: 5, on: 2, phase: 0 },
+      ],
       plans: null,
       exit: null,
     },
@@ -148,6 +172,15 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 2, c: 11 },
       guards: [{ r: 1, c: 6 }, { r: 5, c: 4 }, { r: 7, c: 6 }, { r: 3, c: 8 }],
       switches: [{ r: 3, c: 6, doors: [{ r: 4, c: 6 }] }],
+      pickups: [
+        { r: 8, c: 3, kind: 'mine' },
+        { r: 1, c: 9, kind: 'emp' },
+        { r: 6, c: 3, kind: 'medkit' },
+      ],
+      flamers: [
+        { r: 1, c: 11, dir: 'left', len: 5, period: 4, on: 2, phase: 0 },
+        { r: 8, c: 0, dir: 'right', len: 5, period: 5, on: 2, phase: 2 },
+      ],
       plans: null,
       exit: null,
     },
@@ -167,6 +200,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: null,
       guards: [{ r: 1, c: 9 }, { r: 5, c: 6 }],
       switches: [{ r: 5, c: 4, doors: [{ r: 4, c: 8 }] }],
+      pickups: [
+        { r: 5, c: 8, kind: 'mine' },
+        { r: 7, c: 2, kind: 'emp' },
+        { r: 1, c: 2, kind: 'medkit' },
+        { r: 3, c: 10, kind: 'phase' },
+      ],
+      flamers: [
+        { r: 1, c: 11, dir: 'left', len: 6, period: 4, on: 2, phase: 1 },
+        { r: 5, c: 0, dir: 'right', len: 4, period: 5, on: 2, phase: 2 },
+        { r: 7, c: 0, dir: 'right', len: 6, period: 5, on: 2, phase: 0 },
+      ],
       plans: { r: 3, c: 9 },
       exit: { r: 7, c: 10 },
     },
@@ -220,32 +264,103 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return switches.find((entry) => entry.r === r && entry.c === c) || null;
   }
 
+  function inagentCellKey(r, c) {
+    return `${r}:${c}`;
+  }
+
+  function inagentPickups() {
+    const lvl = inagentLevel();
+    if (Array.isArray(lvl.pickups) && lvl.pickups.length) return lvl.pickups;
+    if (lvl.pickup) return [lvl.pickup];
+    return [];
+  }
+
+  function inagentPickupKey(pickup) {
+    return `${pickup.r}:${pickup.c}:${pickup.kind}`;
+  }
+
+  function inagentPickupAvailable(pickup) {
+    return !S.inagent.collectedPickups.has(inagentPickupKey(pickup));
+  }
+
+  function inagentPickupAt(r, c) {
+    return inagentPickups().find((pickup) => (
+      pickup.r === r &&
+      pickup.c === c &&
+      inagentPickupAvailable(pickup)
+    )) || null;
+  }
+
+  function inagentSolidWall(r, c) {
+    if (inagentOutOfBounds(r, c)) return true;
+    const row = inagentLevel().map[r];
+    return !row || row[c] === '#';
+  }
+
+  function inagentFlameCellsForTick(tick = S.inagent.flamerTick) {
+    const lvl = inagentLevel();
+    const flamers = lvl.flamers || [];
+    const cells = [];
+    const set = new Set();
+    flamers.forEach((flamer) => {
+      const period = Math.max(1, flamer.period || 4);
+      const on = Math.max(0, Math.min(period, flamer.on || 2));
+      const phase = ((tick + (flamer.phase || 0)) % period + period) % period;
+      if (phase >= on) return;
+      const dirMap = {
+        left: [0, -1],
+        right: [0, 1],
+        up: [-1, 0],
+        down: [1, 0],
+      };
+      const vec = dirMap[flamer.dir] || [0, 0];
+      let rr = flamer.r;
+      let cc = flamer.c;
+      for (let i = 0; i < (flamer.len || 0); i += 1) {
+        rr += vec[0];
+        cc += vec[1];
+        if (inagentOutOfBounds(rr, cc)) break;
+        const doorOpen = S.inagent.openDoors.some((door) => door.r === rr && door.c === cc);
+        if (!doorOpen && inagentSolidWall(rr, cc)) break;
+        const key = inagentCellKey(rr, cc);
+        if (set.has(key)) continue;
+        set.add(key);
+        cells.push({ r: rr, c: cc });
+      }
+    });
+    return { cells, set };
+  }
+
   function updateInagentHud() {
     if (!R.inagentHudSector || !R.inagentHudMoves || !R.inagentHudState || !R.inagentMsg) return;
     const lvl = inagentLevel();
+    const pickupsLeft = inagentPickups().filter(inagentPickupAvailable);
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
-    const hpText = `HP: ${S.inagent.lives}/${S.inagent.maxLives}`;
+    const stateParts = [`HP: ${S.inagent.lives}/${S.inagent.maxLives}`];
     if (S.inagent.phaseCharges > 0 || S.inagent.phaseActive) {
-      R.inagentHudState.textContent = `${hpText} // ФАЗА: ${S.inagent.phaseCharges}${S.inagent.phaseActive ? ' [ARM]' : ''}`;
+      stateParts.push(`PH:${S.inagent.phaseCharges}${S.inagent.phaseActive ? '[ARM]' : ''}`);
     }
-    else if (lvl.plans) R.inagentHudState.textContent = `${hpText} // ${S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?'}`;
-    else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `${hpText} // ДВЕРИ: ${S.inagent.doorTimer}`;
-    else R.inagentHudState.textContent = hpText;
+    if (S.inagent.mineCharges > 0) stateParts.push(`MN:${S.inagent.mineCharges}`);
+    if (S.inagent.empCharges > 0) stateParts.push(`EMP:${S.inagent.empCharges}`);
+    if (S.inagent.guardsFrozen > 0) stateParts.push(`FREEZE:${S.inagent.guardsFrozen}`);
+    if (S.inagent.openDoors.length) stateParts.push(`ДВЕРИ:${S.inagent.doorTimer}`);
+    if (lvl.plans) stateParts.push(S.inagent.hasPlans ? 'ПЛАНЫ:✓' : 'ПЛАНЫ:?');
+    R.inagentHudState.textContent = stateParts.join(' // ');
     if (S.inagent.flashTimer > 0) {
       R.inagentMsg.textContent = S.inagent.flashMsg;
       R.inagentMsg.style.color = '#ffcc00';
-    } else if (lvl.pickup && !S.inagent.phaseCollected) {
-      R.inagentMsg.textContent = 'НАЙДИ ФАЗОВЫЙ МОДУЛЬ';
-      R.inagentMsg.style.color = '#7ee6ff';
     } else if (S.inagent.phaseActive) {
-      R.inagentMsg.textContent = 'ФАЗОВЫЙ ШАГ ГОТОВ — СЛЕДУЮЩИЙ ХОД СКВОЗЬ ПРЕГРАДЫ';
+      R.inagentMsg.textContent = 'ФАЗОВЫЙ ШАГ ВЗВЕДЁН — СЛЕДУЮЩИЙ ХОД СКВОЗЬ ПРЕГРАДЫ';
       R.inagentMsg.style.color = '#7ee6ff';
-    } else if (S.inagent.phaseCharges > 0 && S.inagent.level > 0) {
-      R.inagentMsg.textContent = 'Q — ФАЗОВЫЙ ШАГ (ПРОЗРАЧНОСТЬ НА 1 ХОД)';
+    } else if (S.inagent.guardsFrozen > 0) {
+      R.inagentMsg.textContent = 'EMP АКТИВЕН — ОХРАНА НЕ ДВИГАЕТСЯ';
       R.inagentMsg.style.color = '#7ee6ff';
-    } else if (S.inagent.openDoors.length) {
-      R.inagentMsg.textContent = 'ПУТЬ ОТКРЫТ // ОХРАНА ОТВЛЕЧЕНА';
+    } else if (pickupsLeft.length) {
+      R.inagentMsg.textContent = 'Q — ФАЗА // M — МИНА // E — EMP // ИЩИ РЕСУРСЫ';
+      R.inagentMsg.style.color = '#7ee6ff';
+    } else if (S.inagent.mineCharges > 0 || S.inagent.empCharges > 0 || S.inagent.phaseCharges > 0) {
+      R.inagentMsg.textContent = 'ЖДИ МОМЕНТ И ТРАТЬ ЗАРЯДЫ ВЫГОДНО';
       R.inagentMsg.style.color = '#7ee6ff';
     } else if (lvl.plans) {
       R.inagentMsg.textContent = S.inagent.hasPlans ? 'БЕГИ К ВЫХОДУ!' : 'НАЙДИ ПЛАНЫ [?]';
@@ -263,6 +378,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, R.inagentCanvas.width, R.inagentCanvas.height);
     const lvl = inagentLevel();
+    const activeFlames = inagentFlameCellsForTick();
+    const flamerByCell = new Map((lvl.flamers || []).map((flamer) => [inagentCellKey(flamer.r, flamer.c), flamer]));
     const secretPulse = 0.5 + 0.5 * Math.sin(Date.now() / 900);
     const switchPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420);
     for (let r = 0; r < INAGENT_ROWS; r++) {
@@ -319,6 +436,30 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           ctx.font = 'bold 8px monospace';
           ctx.fillText('SW', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
         }
+
+        if (activeFlames.set.has(inagentCellKey(r, c))) {
+          ctx.fillStyle = 'rgba(255,80,10,0.22)';
+          ctx.fillRect(x + 1, y + 1, INAGENT_CELL - 2, INAGENT_CELL - 2);
+          ctx.strokeStyle = 'rgba(255,120,30,0.7)';
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(x + 5.5, y + 5.5, INAGENT_CELL - 11, INAGENT_CELL - 11);
+          ctx.fillStyle = '#ffb347';
+          ctx.font = 'bold 8px monospace';
+          ctx.fillText('F', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+        }
+
+        const flamer = flamerByCell.get(inagentCellKey(r, c));
+        if (flamer) {
+          ctx.fillStyle = '#8b1f00';
+          ctx.fillRect(x + 8, y + 8, INAGENT_CELL - 16, INAGENT_CELL - 16);
+          ctx.strokeStyle = '#ff6a00';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 8.5, y + 8.5, INAGENT_CELL - 17, INAGENT_CELL - 17);
+          const arrows = { left: '←', right: '→', up: '↑', down: '↓' };
+          ctx.fillStyle = '#ffd9b3';
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText(arrows[flamer.dir] || 'F', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+        }
       }
     }
 
@@ -337,21 +478,28 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
     }
 
-    if (lvl.pickup && !S.inagent.phaseCollected) {
-      const x = lvl.pickup.c * INAGENT_CELL;
-      const y = lvl.pickup.r * INAGENT_CELL;
+    inagentPickups().filter(inagentPickupAvailable).forEach((pickup) => {
+      const x = pickup.c * INAGENT_CELL;
+      const y = pickup.r * INAGENT_CELL;
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 380);
-      ctx.fillStyle = `rgba(126,230,255,${0.18 + pulse * 0.2})`;
+      const styleByKind = {
+        phase: { glow: '#7ee6ff', icon: 'PH', bg: '#02141a' },
+        mine: { glow: '#ff8a65', icon: 'MN', bg: '#1e0a02' },
+        emp: { glow: '#9fa8ff', icon: 'EM', bg: '#090b1a' },
+        medkit: { glow: '#73ff9f', icon: 'HP', bg: '#031407' },
+      };
+      const style = styleByKind[pickup.kind] || styleByKind.phase;
+      ctx.fillStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${0.18 + pulse * 0.2})`;
       ctx.beginPath();
       ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.24, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = `rgba(126,230,255,${0.25 + pulse * 0.35})`;
+      ctx.strokeStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${0.25 + pulse * 0.35})`;
       ctx.lineWidth = 1.2;
       ctx.strokeRect(x + 9.5, y + 9.5, INAGENT_CELL - 19, INAGENT_CELL - 19);
-      ctx.fillStyle = '#02141a';
+      ctx.fillStyle = style.bg;
       ctx.font = 'bold 8px monospace';
-      ctx.fillText('PH', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
-    }
+      ctx.fillText(style.icon, x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+    });
 
     if (lvl.exit) {
       const ex = lvl.exit.c * INAGENT_CELL;
@@ -365,10 +513,23 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.fillText('EXIT', ex + INAGENT_CELL / 2, ey + INAGENT_CELL / 2 + 1);
     }
 
+    S.inagent.mines.forEach((mine) => {
+      const mx = mine.c * INAGENT_CELL;
+      const my = mine.r * INAGENT_CELL;
+      ctx.fillStyle = 'rgba(255,70,40,0.22)';
+      ctx.fillRect(mx + 11, my + 11, INAGENT_CELL - 22, INAGENT_CELL - 22);
+      ctx.strokeStyle = 'rgba(255,120,70,0.75)';
+      ctx.lineWidth = 1.1;
+      ctx.strokeRect(mx + 11.5, my + 11.5, INAGENT_CELL - 23, INAGENT_CELL - 23);
+      ctx.fillStyle = '#ff9a7a';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('✹', mx + INAGENT_CELL / 2, my + INAGENT_CELL / 2 + 1);
+    });
+
     S.inagent.guards.forEach((guard) => {
       const x = guard.c * INAGENT_CELL;
       const y = guard.r * INAGENT_CELL;
-      ctx.fillStyle = '#ff3030';
+      ctx.fillStyle = S.inagent.guardsFrozen > 0 ? '#7aa0ff' : '#ff3030';
       ctx.beginPath();
       ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
       ctx.fill();
@@ -428,13 +589,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return S.inagent.guards.some((guard) => guard.r === S.inagent.player.r && guard.c === S.inagent.player.c);
   }
 
-  function inagentCrossed(prevPlayer, nextPlayer, prevGuards, nextGuards) {
-    return nextGuards.some((guard, idx) => (
-      guard.r === prevPlayer.r &&
-      guard.c === prevPlayer.c &&
-      prevGuards[idx].r === nextPlayer.r &&
-      prevGuards[idx].c === nextPlayer.c
-    ));
+  function inagentCrossed(prevPlayer, nextPlayer, prevGuardMap, nextGuards) {
+    return nextGuards.some((guard) => {
+      const prev = prevGuardMap.get(guard.id);
+      if (!prev) return false;
+      return (
+        guard.r === prevPlayer.r &&
+        guard.c === prevPlayer.c &&
+        prev.r === nextPlayer.r &&
+        prev.c === nextPlayer.c
+      );
+    });
   }
 
   function tickInagentDoorState() {
@@ -472,6 +637,109 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return true;
   }
 
+  function activateInagentMine() {
+    if (S.inagent.mineCharges <= 0) {
+      flashInagent('МИН НЕТ');
+      return true;
+    }
+    const nearGuard = S.inagent.guards.some((guard) => (
+      Math.abs(guard.r - S.inagent.player.r) + Math.abs(guard.c - S.inagent.player.c) === 1
+    ));
+    if (!nearGuard) {
+      flashInagent('ДЛЯ МИНЫ НУЖНО ПОДОЙТИ ВПЛОТНУЮ К ОХРАНЕ');
+      drawInagent();
+      updateInagentHud();
+      return true;
+    }
+    if (S.inagent.mines.some((mine) => mine.r === S.inagent.player.r && mine.c === S.inagent.player.c)) {
+      flashInagent('МИНА УЖЕ СТОИТ');
+      drawInagent();
+      updateInagentHud();
+      return true;
+    }
+    S.inagent.mineCharges -= 1;
+    S.inagent.mines.push({ r: S.inagent.player.r, c: S.inagent.player.c });
+    flashInagent('МИНА УСТАНОВЛЕНА — ОТОЙДИ НА ШАГ');
+    drawInagent();
+    updateInagentHud();
+    return true;
+  }
+
+  function activateInagentEmp() {
+    if (S.inagent.empCharges <= 0) {
+      flashInagent('EMP ПУСТ');
+      return true;
+    }
+    S.inagent.empCharges -= 1;
+    S.inagent.guardsFrozen = Math.max(S.inagent.guardsFrozen, 2);
+    flashInagent('EMP ИМПУЛЬС — ОХРАНА ЗАМОРОЖЕНА');
+    stepInagent(0, 0, { isAction: true });
+    return true;
+  }
+
+  function applyInagentPickup(pickup) {
+    if (!pickup) return;
+    S.inagent.collectedPickups.add(inagentPickupKey(pickup));
+    if (pickup.kind === 'phase') {
+      S.inagent.phaseCharges += 1;
+      S.inagent.phaseCollected = true;
+      flashInagent('ФАЗОВЫЙ МОДУЛЬ НАЙДЕН — НАЖМИ Q');
+      return;
+    }
+    if (pickup.kind === 'mine') {
+      S.inagent.mineCharges += 1;
+      flashInagent('ПОЛУЧЕНА МИНА — M ЧТОБЫ УСТАНОВИТЬ');
+      return;
+    }
+    if (pickup.kind === 'emp') {
+      S.inagent.empCharges += 1;
+      flashInagent('ПОЛУЧЕН EMP — E ЧТОБЫ ЗАМОРОЗИТЬ ОХРАНУ');
+      return;
+    }
+    if (pickup.kind === 'medkit') {
+      const prev = S.inagent.lives;
+      S.inagent.lives = Math.min(S.inagent.maxLives, S.inagent.lives + 1);
+      flashInagent(S.inagent.lives > prev ? 'МЕД-ПАКЕТ: +1 ЖИЗНЬ' : 'МЕД-ПАКЕТ: ЗДОРОВЬЕ ПОЛНОЕ');
+    }
+  }
+
+  function resolveInagentMines() {
+    if (!S.inagent.mines.length || !S.inagent.guards.length) return 0;
+    const mineMap = new Map(S.inagent.mines.map((mine) => [inagentCellKey(mine.r, mine.c), mine]));
+    const survivors = [];
+    let detonations = 0;
+    S.inagent.guards.forEach((guard) => {
+      const key = inagentCellKey(guard.r, guard.c);
+      if (mineMap.has(key)) {
+        mineMap.delete(key);
+        detonations += 1;
+      } else {
+        survivors.push(guard);
+      }
+    });
+    if (!detonations) return 0;
+    S.inagent.guards = survivors;
+    S.inagent.mines = Array.from(mineMap.values());
+    return detonations;
+  }
+
+  function resolveInagentFlames({ phaseStep = false } = {}) {
+    const activeFlames = inagentFlameCellsForTick();
+    if (!activeFlames.set.size) return { playerBurned: false, guardsBurned: 0 };
+    const survivors = [];
+    let guardsBurned = 0;
+    S.inagent.guards.forEach((guard) => {
+      if (activeFlames.set.has(inagentCellKey(guard.r, guard.c))) {
+        guardsBurned += 1;
+      } else {
+        survivors.push(guard);
+      }
+    });
+    if (guardsBurned) S.inagent.guards = survivors;
+    const playerBurned = !phaseStep && activeFlames.set.has(inagentCellKey(S.inagent.player.r, S.inagent.player.c));
+    return { playerBurned, guardsBurned };
+  }
+
   function showInagentTransition(nextLevel) {
     S.inagent.state = 'trans';
     setInagentScreen('trans');
@@ -501,10 +769,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
   }
 
-  function resetInagentLevelState(level = S.inagent.level) {
+  function resetInagentLevelState(level = S.inagent.level, options = {}) {
     S.inagent.level = level;
     S.inagent.player = { r: 1, c: 1 };
-    S.inagent.guards = inagentLevel().guards.map((guard) => ({ ...guard }));
+    S.inagent.guards = inagentLevel().guards.map((guard, idx) => ({ ...guard, id: `L${level}-G${idx}` }));
     S.inagent.hasPlans = false;
     S.inagent.moves = 0;
     S.inagent.state = 'play';
@@ -514,6 +782,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.doorTimer = 0;
     S.inagent.decoyTarget = null;
     S.inagent.phaseActive = false;
+    S.inagent.mines = [];
+    S.inagent.guardsFrozen = 0;
+    S.inagent.flamerTick = 0;
+    if (!options.keepPickups) S.inagent.collectedPickups = new Set();
   }
 
   function initInagent(level = 0) {
@@ -521,6 +793,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (level === 0) {
       S.inagent.phaseCharges = 0;
       S.inagent.phaseCollected = false;
+      S.inagent.mineCharges = 0;
+      S.inagent.empCharges = 0;
       S.inagent.maxLives = 3;
       S.inagent.lives = S.inagent.maxLives;
     }
@@ -538,57 +812,81 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       return;
     }
     const left = S.inagent.lives;
-    resetInagentLevelState(S.inagent.level);
+    resetInagentLevelState(S.inagent.level, { keepPickups: true });
     flashInagent(`ТЕБЯ ЗАМЕТИЛИ // -1 ЖИЗНЬ // ОСТАЛОСЬ: ${left}`);
     drawInagent();
     updateInagentHud();
   }
 
-  function stepInagent(dr, dc) {
+  function stepInagent(dr, dc, options = {}) {
     if (!S.inagent.open || S.inagent.state !== 'play') return;
+    const isAction = options.isAction === true;
     const prevPlayer = { ...S.inagent.player };
-    const phaseStep = S.inagent.phaseActive;
-    const nr = S.inagent.player.r + dr;
-    const nc = S.inagent.player.c + dc;
-    if (inagentIsSecret(nr, nc)) {
+    const phaseStep = !isAction && S.inagent.phaseActive;
+    let nr = S.inagent.player.r;
+    let nc = S.inagent.player.c;
+    if (!isAction) {
+      nr = S.inagent.player.r + dr;
+      nc = S.inagent.player.c + dc;
+      if (inagentIsSecret(nr, nc)) {
+        S.inagent.phaseActive = false;
+        S.inagent.moves += 1;
+        updateInagentHud();
+        showInagentTransition(S.inagent.level + 1);
+        return;
+      }
+      if (inagentOutOfBounds(nr, nc)) return;
+      if (!phaseStep && inagentWall(nr, nc)) return;
       S.inagent.phaseActive = false;
-      S.inagent.moves += 1;
-      updateInagentHud();
-      showInagentTransition(S.inagent.level + 1);
-      return;
+      S.inagent.player.r = nr;
+      S.inagent.player.c = nc;
+    } else {
+      nr = S.inagent.player.r;
+      nc = S.inagent.player.c;
     }
-    if (inagentOutOfBounds(nr, nc)) return;
-    if (!phaseStep && inagentWall(nr, nc)) return;
-    S.inagent.phaseActive = false;
-    S.inagent.player.r = nr;
-    S.inagent.player.c = nc;
     S.inagent.moves += 1;
 
     const lvl = inagentLevel();
-    const prevGuards = phaseStep ? [] : S.inagent.guards.map((guard) => ({ ...guard }));
+    const prevGuardMap = new Map(S.inagent.guards.map((guard) => [guard.id, { r: guard.r, c: guard.c }]));
     const switchNode = inagentSwitchAt(nr, nc);
-    if (lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
+    const pickup = inagentPickupAt(nr, nc);
+    if (pickup) applyInagentPickup(pickup);
+    if (!isAction && lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
       S.inagent.hasPlans = true;
       flashInagent('ПЛАНЫ ПОЛУЧЕНЫ — БЕГИ К ВЫХОДУ!');
     }
-    if (lvl.pickup && !S.inagent.phaseCollected && nr === lvl.pickup.r && nc === lvl.pickup.c) {
-      S.inagent.phaseCollected = true;
-      S.inagent.phaseCharges = 1;
-      flashInagent('ФАЗОВЫЙ МОДУЛЬ НАЙДЕН — НАЖМИ Q');
-    }
-    if (switchNode) activateInagentSwitch(switchNode);
+    if (switchNode && !isAction) activateInagentSwitch(switchNode);
     if (lvl.exit && S.inagent.hasPlans && nr === lvl.exit.r && nc === lvl.exit.c) {
       showInagentEnd(true);
       updateInagentHud();
       return;
     }
+
     tickInagentDoorState();
-    S.inagent.guards.forEach(moveInagentGuard);
-    const caught = phaseStep ? false : (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuards, S.inagent.guards));
-    if (caught) {
+    S.inagent.flamerTick += 1;
+    const guardsFrozenNow = S.inagent.guardsFrozen > 0;
+    if (!guardsFrozenNow) {
+      S.inagent.guards.forEach(moveInagentGuard);
+    }
+
+    const detonations = resolveInagentMines();
+    const flameResult = resolveInagentFlames({ phaseStep });
+    if (detonations) flashInagent(`МИНА СРАБОТАЛА // -${detonations} ОХРАНЫ`);
+    if (flameResult.guardsBurned) flashInagent(`ОГНЕМЕТ // -${flameResult.guardsBurned} ОХРАНЫ`);
+    if (S.inagent.guardsFrozen > 0) S.inagent.guardsFrozen -= 1;
+
+    const caught = !phaseStep && (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuardMap, S.inagent.guards));
+    if (flameResult.playerBurned || caught) {
+      if (flameResult.playerBurned) flashInagent('ОГНЕМЕТ ЗАДЕЛ ТЕБЯ');
+      if (caught && !flameResult.playerBurned) flashInagent('ОХРАНА ПЕРЕХВАТИЛА ТЕБЯ');
       handleInagentLifeLoss();
       return;
     }
+
+    if (!S.inagent.guards.length && S.inagent.flashTimer <= 0) {
+      flashInagent('СЕКТОР ЗАЧИЩЕН — ИЩИ ТАЙНЫЙ ПРОХОД');
+    }
+
     if (S.inagent.flashTimer > 0) S.inagent.flashTimer -= 1;
     drawInagent();
     updateInagentHud();
@@ -626,6 +924,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (event.key === 'q' || event.key === 'Q' || event.key === 'й' || event.key === 'Й') {
       event.preventDefault();
       return activateInagentPhase();
+    }
+    if (event.key === 'm' || event.key === 'M' || event.key === 'ь' || event.key === 'Ь') {
+      event.preventDefault();
+      return activateInagentMine();
+    }
+    if (event.key === 'e' || event.key === 'E' || event.key === 'у' || event.key === 'У') {
+      event.preventDefault();
+      return activateInagentEmp();
     }
     const move = {
       ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0], ц: [-1, 0], Ц: [-1, 0],
