@@ -109,6 +109,7 @@ window.OMS = window.OMS || {};
       S.lastActivity = Date.now();
 
       if (e.defaultPrevented) return;
+      if (OMS.features && OMS.features.handleInagentKey && OMS.features.handleInagentKey(e)) return;
       if (S.currentPhase === 2) {
         const isArrowControl = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
         const isSnakeOnlyWasd = ['a', 'A', 'd', 'D', 'w', 'W', 's', 'S', 'ф', 'Ф', 'в', 'В', 'ц', 'Ц', 'ы', 'Ы'].includes(e.key);

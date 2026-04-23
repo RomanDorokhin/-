@@ -88,7 +88,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 2, c: 11 },
-      guards: [{ r: 6, c: 5 }],
+      guards: [{ r: 6, c: 7 }],
       plans: null,
       exit: null,
     },
@@ -142,7 +142,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 2, c: 11 },
-      guards: [{ r: 1, c: 6 }, { r: 5, c: 5 }, { r: 7, c: 3 }, { r: 3, c: 9 }],
+      guards: [{ r: 1, c: 6 }, { r: 5, c: 4 }, { r: 7, c: 6 }, { r: 3, c: 8 }],
       plans: null,
       exit: null,
     },
@@ -411,11 +411,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.open = true;
     R.inagentOverlay.classList.add('open');
     R.inagentOverlay.setAttribute('aria-hidden', 'false');
-    S.inagent.state = 'intro';
-    setInagentScreen('intro');
-    drawInagent();
-    updateInagentHud();
-    setSnakeStatus('ИНАГЕНТ // НАЖМИ B ЕЩЁ РАЗ ИЛИ КНОПКУ СТАРТА', 1800);
+    initInagent(0);
+    setSnakeStatus('ИНАГЕНТ // ПРОЙДИ ВСЕ 5 СЕКТОРОВ', 1800);
   }
 
   function toggleInagentMode() {
