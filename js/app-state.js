@@ -289,6 +289,8 @@ window.OMS = window.OMS || {};
       open: false,
       state: 'intro',
       level: 0,
+      lives: 3,
+      maxLives: 3,
       player: { r: 1, c: 1 },
       guards: [],
       hasPlans: false,

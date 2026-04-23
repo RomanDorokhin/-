@@ -225,12 +225,13 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const lvl = inagentLevel();
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
+    const hpText = `HP: ${S.inagent.lives}/${S.inagent.maxLives}`;
     if (S.inagent.phaseCharges > 0 || S.inagent.phaseActive) {
-      R.inagentHudState.textContent = `ФАЗА: ${S.inagent.phaseCharges}${S.inagent.phaseActive ? ' [ARM]' : ''}`;
+      R.inagentHudState.textContent = `${hpText} // ФАЗА: ${S.inagent.phaseCharges}${S.inagent.phaseActive ? ' [ARM]' : ''}`;
     }
-    else if (lvl.plans) R.inagentHudState.textContent = S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?';
-    else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `ДВЕРИ: ${S.inagent.doorTimer}`;
-    else R.inagentHudState.textContent = '';
+    else if (lvl.plans) R.inagentHudState.textContent = `${hpText} // ${S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?'}`;
+    else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `${hpText} // ДВЕРИ: ${S.inagent.doorTimer}`;
+    else R.inagentHudState.textContent = hpText;
     if (S.inagent.flashTimer > 0) {
       R.inagentMsg.textContent = S.inagent.flashMsg;
       R.inagentMsg.style.color = '#ffcc00';
@@ -500,7 +501,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
   }
 
-  function initInagent(level = 0) {
+  function resetInagentLevelState(level = S.inagent.level) {
     S.inagent.level = level;
     S.inagent.player = { r: 1, c: 1 };
     S.inagent.guards = inagentLevel().guards.map((guard) => ({ ...guard }));
@@ -513,11 +514,32 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.doorTimer = 0;
     S.inagent.decoyTarget = null;
     S.inagent.phaseActive = false;
+  }
+
+  function initInagent(level = 0) {
+    resetInagentLevelState(level);
     if (level === 0) {
       S.inagent.phaseCharges = 0;
       S.inagent.phaseCollected = false;
+      S.inagent.maxLives = 3;
+      S.inagent.lives = S.inagent.maxLives;
     }
     setInagentScreen(null);
+    drawInagent();
+    updateInagentHud();
+  }
+
+  function handleInagentLifeLoss() {
+    S.inagent.lives -= 1;
+    if (S.inagent.lives <= 0) {
+      S.inagent.lives = 0;
+      showInagentEnd(false);
+      updateInagentHud();
+      return;
+    }
+    const left = S.inagent.lives;
+    resetInagentLevelState(S.inagent.level);
+    flashInagent(`ТЕБЯ ЗАМЕТИЛИ // -1 ЖИЗНЬ // ОСТАЛОСЬ: ${left}`);
     drawInagent();
     updateInagentHud();
   }
@@ -564,8 +586,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.guards.forEach(moveInagentGuard);
     const caught = phaseStep ? false : (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuards, S.inagent.guards));
     if (caught) {
-      showInagentEnd(false);
-      updateInagentHud();
+      handleInagentLifeLoss();
       return;
     }
     if (S.inagent.flashTimer > 0) S.inagent.flashTimer -= 1;
