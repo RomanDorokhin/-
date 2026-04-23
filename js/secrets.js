@@ -144,7 +144,7 @@ window.OMS = window.OMS || {};
   function triggerSecretAction(action) {
     if (action === 'casino' && OMS.features) OMS.features.showCasinoAd();
     if (action === 'console' && OMS.main) OMS.main.toggleSecretConsole();
-    if (action === 'inagent' && OMS.features) OMS.features.openInagent();
+    if (action === 'inagent' && OMS.features) OMS.features.openInagentMode();
   }
 
   function renderBackpack() {

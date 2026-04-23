@@ -90,7 +90,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 2, c: 11 },
       guards: [{ r: 6, c: 7 }],
       switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
-      pickup: { r: 2, c: 10, kind: 'rewind' },
+      pickup: { r: 7, c: 2, kind: 'phase' },
       plans: null,
       exit: null,
     },
@@ -186,6 +186,11 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (!S.inagent.open) return;
     S.inagent.open = false;
     S.inagent.state = 'intro';
+    if (S.inagent.transitionTimer) {
+      clearTimeout(S.inagent.transitionTimer);
+      S.inagent.transitionTimer = null;
+    }
+    S.inagent.phaseActive = false;
     const overlay = R.inagentOverlay;
     if (overlay) overlay.classList.remove('open');
     if (overlay) overlay.setAttribute('aria-hidden', 'true');
@@ -198,9 +203,13 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return !!secret && secret.r === r && secret.c === c;
   }
 
+  function inagentOutOfBounds(r, c) {
+    return r < 0 || r >= INAGENT_ROWS || c < 0 || c >= INAGENT_COLS;
+  }
+
   function inagentWall(r, c) {
     if (inagentIsSecret(r, c)) return false;
-    if (r < 0 || r >= INAGENT_ROWS || c < 0 || c >= INAGENT_COLS) return true;
+    if (inagentOutOfBounds(r, c)) return true;
     if (S.inagent.openDoors.some((door) => door.r === r && door.c === c)) return false;
     const row = inagentLevel().map[r];
     return !row || row[c] === '#';
@@ -216,18 +225,23 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const lvl = inagentLevel();
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
-    if (S.inagent.rewindCharges > 0) R.inagentHudState.textContent = `RW: ${S.inagent.rewindCharges}`;
+    if (S.inagent.phaseCharges > 0 || S.inagent.phaseActive) {
+      R.inagentHudState.textContent = `ФАЗА: ${S.inagent.phaseCharges}${S.inagent.phaseActive ? ' [ARM]' : ''}`;
+    }
     else if (lvl.plans) R.inagentHudState.textContent = S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?';
     else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `ДВЕРИ: ${S.inagent.doorTimer}`;
     else R.inagentHudState.textContent = '';
     if (S.inagent.flashTimer > 0) {
       R.inagentMsg.textContent = S.inagent.flashMsg;
       R.inagentMsg.style.color = '#ffcc00';
-    } else if (lvl.pickup && !S.inagent.rewindCollected) {
-      R.inagentMsg.textContent = 'НАЙДИ ХРОНО-МОДУЛЬ';
+    } else if (lvl.pickup && !S.inagent.phaseCollected) {
+      R.inagentMsg.textContent = 'НАЙДИ ФАЗОВЫЙ МОДУЛЬ';
       R.inagentMsg.style.color = '#7ee6ff';
-    } else if (S.inagent.rewindCharges > 0 && S.inagent.level > 0) {
-      R.inagentMsg.textContent = 'Q — ОТМОТКА ОХРАНЫ НА 2 ШАГА';
+    } else if (S.inagent.phaseActive) {
+      R.inagentMsg.textContent = 'ФАЗОВЫЙ ШАГ ГОТОВ — СЛЕДУЮЩИЙ ХОД СКВОЗЬ ПРЕГРАДЫ';
+      R.inagentMsg.style.color = '#7ee6ff';
+    } else if (S.inagent.phaseCharges > 0 && S.inagent.level > 0) {
+      R.inagentMsg.textContent = 'Q — ФАЗОВЫЙ ШАГ (ПРОЗРАЧНОСТЬ НА 1 ХОД)';
       R.inagentMsg.style.color = '#7ee6ff';
     } else if (S.inagent.openDoors.length) {
       R.inagentMsg.textContent = 'ПУТЬ ОТКРЫТ // ОХРАНА ОТВЛЕЧЕНА';
@@ -322,7 +336,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
     }
 
-    if (lvl.pickup && !S.inagent.rewindCollected) {
+    if (lvl.pickup && !S.inagent.phaseCollected) {
       const x = lvl.pickup.c * INAGENT_CELL;
       const y = lvl.pickup.r * INAGENT_CELL;
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 380);
@@ -335,7 +349,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.strokeRect(x + 9.5, y + 9.5, INAGENT_CELL - 19, INAGENT_CELL - 19);
       ctx.fillStyle = '#02141a';
       ctx.font = 'bold 8px monospace';
-      ctx.fillText('RW', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+      ctx.fillText('PH', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
     }
 
     if (lvl.exit) {
@@ -350,7 +364,6 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.fillText('EXIT', ex + INAGENT_CELL / 2, ey + INAGENT_CELL / 2 + 1);
     }
 
-    lvl.guards = S.inagent.guards;
     S.inagent.guards.forEach((guard) => {
       const x = guard.c * INAGENT_CELL;
       const y = guard.r * INAGENT_CELL;
@@ -365,7 +378,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
     const px = S.inagent.player.c * INAGENT_CELL;
     const py = S.inagent.player.r * INAGENT_CELL;
-    ctx.fillStyle = '#c8ff00';
+    ctx.fillStyle = S.inagent.phaseActive ? '#7ee6ff' : '#c8ff00';
     ctx.beginPath();
     ctx.arc(px + INAGENT_CELL / 2, py + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
     ctx.fill();
@@ -441,18 +454,18 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     flashInagent('ПУЛЬТ АКТИВЕН — ДВЕРЬ ОТКРЫТА, ОХРАНА ОТВЛЕЧЕНА');
   }
 
-  function rewindInagentGuards() {
-    if (S.inagent.rewindCharges <= 0 || S.inagent.guardHistory.length < 2) {
-      flashInagent('ХРОНО-МОДУЛЬ ПУСТ');
+  function activateInagentPhase() {
+    if (S.inagent.phaseActive) {
+      flashInagent('ФАЗОВЫЙ ШАГ УЖЕ ВЗВЕДЕН');
       return true;
     }
-    S.inagent.guards = S.inagent.guardHistory[1].map((guard) => ({ ...guard }));
-    S.inagent.guardHistory = [];
-    S.inagent.rewindCharges -= 1;
-    S.inagent.openDoors = [];
-    S.inagent.doorTimer = 0;
-    S.inagent.decoyTarget = null;
-    flashInagent('ОХРАНА ОТМОТАНА НА 2 ШАГА');
+    if (S.inagent.phaseCharges <= 0) {
+      flashInagent('ФАЗОВЫЙ МОДУЛЬ ПУСТ');
+      return true;
+    }
+    S.inagent.phaseCharges -= 1;
+    S.inagent.phaseActive = true;
+    flashInagent('ФАЗА ВКЛЮЧЕНА — СЛЕДУЮЩИЙ ШАГ СКВОЗЬ ПРЕГРАДЫ');
     drawInagent();
     updateInagentHud();
     return true;
@@ -464,7 +477,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentTransText) {
       R.inagentTransText.innerHTML = `СЕКТОР ${nextLevel} ПРОЙДЕН<br><span style="color:#c8ff0055;font-size:11px">ТЫ ПРОНИКАЕШЬ ГЛУБЖЕ В ЗАМОК...</span><br><span style="color:#c8ff0033;font-size:10px">СЕКТОР ${nextLevel + 1} / ${INAGENT_LEVELS.length}</span>`;
     }
-    setTimeout(() => {
+    if (S.inagent.transitionTimer) clearTimeout(S.inagent.transitionTimer);
+    S.inagent.transitionTimer = setTimeout(() => {
+      S.inagent.transitionTimer = null;
+      if (!S.inagent.open) return;
       initInagent(nextLevel);
     }, 1800);
   }
@@ -496,10 +512,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.openDoors = [];
     S.inagent.doorTimer = 0;
     S.inagent.decoyTarget = null;
-    S.inagent.guardHistory = [];
+    S.inagent.phaseActive = false;
     if (level === 0) {
-      S.inagent.rewindCharges = 0;
-      S.inagent.rewindCollected = false;
+      S.inagent.phaseCharges = 0;
+      S.inagent.phaseCollected = false;
     }
     setInagentScreen(null);
     drawInagent();
@@ -509,30 +525,34 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function stepInagent(dr, dc) {
     if (!S.inagent.open || S.inagent.state !== 'play') return;
     const prevPlayer = { ...S.inagent.player };
+    const phaseStep = S.inagent.phaseActive;
     const nr = S.inagent.player.r + dr;
     const nc = S.inagent.player.c + dc;
     if (inagentIsSecret(nr, nc)) {
+      S.inagent.phaseActive = false;
       S.inagent.moves += 1;
       updateInagentHud();
       showInagentTransition(S.inagent.level + 1);
       return;
     }
-    if (inagentWall(nr, nc)) return;
+    if (inagentOutOfBounds(nr, nc)) return;
+    if (!phaseStep && inagentWall(nr, nc)) return;
+    S.inagent.phaseActive = false;
     S.inagent.player.r = nr;
     S.inagent.player.c = nc;
     S.inagent.moves += 1;
 
     const lvl = inagentLevel();
-    const prevGuards = S.inagent.guards.map((guard) => ({ ...guard }));
+    const prevGuards = phaseStep ? [] : S.inagent.guards.map((guard) => ({ ...guard }));
     const switchNode = inagentSwitchAt(nr, nc);
     if (lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
       S.inagent.hasPlans = true;
       flashInagent('ПЛАНЫ ПОЛУЧЕНЫ — БЕГИ К ВЫХОДУ!');
     }
-    if (lvl.pickup && !S.inagent.rewindCollected && nr === lvl.pickup.r && nc === lvl.pickup.c) {
-      S.inagent.rewindCollected = true;
-      S.inagent.rewindCharges = 1;
-      flashInagent('ХРОНО-МОДУЛЬ НАЙДЕН — НАЖМИ Q ДЛЯ ОТМОТКИ');
+    if (lvl.pickup && !S.inagent.phaseCollected && nr === lvl.pickup.r && nc === lvl.pickup.c) {
+      S.inagent.phaseCollected = true;
+      S.inagent.phaseCharges = 1;
+      flashInagent('ФАЗОВЫЙ МОДУЛЬ НАЙДЕН — НАЖМИ Q');
     }
     if (switchNode) activateInagentSwitch(switchNode);
     if (lvl.exit && S.inagent.hasPlans && nr === lvl.exit.r && nc === lvl.exit.c) {
@@ -542,8 +562,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
     tickInagentDoorState();
     S.inagent.guards.forEach(moveInagentGuard);
-    S.inagent.guardHistory = [prevGuards, ...S.inagent.guardHistory].slice(0, 3);
-    if (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuards, S.inagent.guards)) {
+    const caught = phaseStep ? false : (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuards, S.inagent.guards));
+    if (caught) {
       showInagentEnd(false);
       updateInagentHud();
       return;
@@ -584,7 +604,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
     if (event.key === 'q' || event.key === 'Q' || event.key === 'й' || event.key === 'Й') {
       event.preventDefault();
-      return rewindInagentGuards();
+      return activateInagentPhase();
     }
     const move = {
       ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0], ц: [-1, 0], Ц: [-1, 0],
@@ -1579,6 +1599,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     triggerScreamer,
     triggerPhoneMeme,
     triggerRansheByloLuchshe,
+    openInagent: openInagentMode,
     openInagentMode,
     toggleInagentMode,
     closeInagent,
