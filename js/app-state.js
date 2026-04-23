@@ -291,6 +291,7 @@ window.OMS = window.OMS || {};
       level: 0,
       player: { r: 1, c: 1 },
       guards: [],
+      guardHistory: [],
       hasPlans: false,
       moves: 0,
       flashMsg: '',
@@ -298,6 +299,8 @@ window.OMS = window.OMS || {};
       openDoors: [],
       doorTimer: 0,
       decoyTarget: null,
+      rewindCharges: 0,
+      rewindCollected: false,
       transitionTimer: null,
     },
     secretSystems: {

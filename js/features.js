@@ -90,6 +90,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       secret: { r: 2, c: 11 },
       guards: [{ r: 6, c: 7 }],
       switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
+      pickup: { r: 2, c: 10, kind: 'rewind' },
       plans: null,
       exit: null,
     },
@@ -107,7 +108,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 1, c: 11 },
-      guards: [{ r: 5, c: 7 }, { r: 7, c: 3 }],
+      guards: [{ r: 5, c: 6 }, { r: 7, c: 3 }],
       switches: [{ r: 7, c: 8, doors: [{ r: 4, c: 6 }] }],
       plans: null,
       exit: null,
@@ -215,12 +216,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const lvl = inagentLevel();
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
-    if (lvl.plans) R.inagentHudState.textContent = S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?';
+    if (S.inagent.rewindCharges > 0) R.inagentHudState.textContent = `RW: ${S.inagent.rewindCharges}`;
+    else if (lvl.plans) R.inagentHudState.textContent = S.inagent.hasPlans ? 'ПЛАНЫ: ✓' : 'ПЛАНЫ: ?';
     else if (S.inagent.openDoors.length) R.inagentHudState.textContent = `ДВЕРИ: ${S.inagent.doorTimer}`;
     else R.inagentHudState.textContent = '';
     if (S.inagent.flashTimer > 0) {
       R.inagentMsg.textContent = S.inagent.flashMsg;
       R.inagentMsg.style.color = '#ffcc00';
+    } else if (lvl.pickup && !S.inagent.rewindCollected) {
+      R.inagentMsg.textContent = 'НАЙДИ ХРОНО-МОДУЛЬ';
+      R.inagentMsg.style.color = '#7ee6ff';
+    } else if (S.inagent.rewindCharges > 0 && S.inagent.level > 0) {
+      R.inagentMsg.textContent = 'Q — ОТМОТКА ОХРАНЫ НА 2 ШАГА';
+      R.inagentMsg.style.color = '#7ee6ff';
     } else if (S.inagent.openDoors.length) {
       R.inagentMsg.textContent = 'ПУТЬ ОТКРЫТ // ОХРАНА ОТВЛЕЧЕНА';
       R.inagentMsg.style.color = '#7ee6ff';
@@ -314,6 +322,22 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
     }
 
+    if (lvl.pickup && !S.inagent.rewindCollected) {
+      const x = lvl.pickup.c * INAGENT_CELL;
+      const y = lvl.pickup.r * INAGENT_CELL;
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 380);
+      ctx.fillStyle = `rgba(126,230,255,${0.18 + pulse * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(126,230,255,${0.25 + pulse * 0.35})`;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(x + 9.5, y + 9.5, INAGENT_CELL - 19, INAGENT_CELL - 19);
+      ctx.fillStyle = '#02141a';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText('RW', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+    }
+
     if (lvl.exit) {
       const ex = lvl.exit.c * INAGENT_CELL;
       const ey = lvl.exit.r * INAGENT_CELL;
@@ -390,6 +414,15 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return S.inagent.guards.some((guard) => guard.r === S.inagent.player.r && guard.c === S.inagent.player.c);
   }
 
+  function inagentCrossed(prevPlayer, nextPlayer, prevGuards, nextGuards) {
+    return nextGuards.some((guard, idx) => (
+      guard.r === prevPlayer.r &&
+      guard.c === prevPlayer.c &&
+      prevGuards[idx].r === nextPlayer.r &&
+      prevGuards[idx].c === nextPlayer.c
+    ));
+  }
+
   function tickInagentDoorState() {
     if (S.inagent.doorTimer > 0) {
       S.inagent.doorTimer -= 1;
@@ -406,6 +439,23 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.doorTimer = 5;
     S.inagent.decoyTarget = { r: switchNode.r, c: switchNode.c };
     flashInagent('ПУЛЬТ АКТИВЕН — ДВЕРЬ ОТКРЫТА, ОХРАНА ОТВЛЕЧЕНА');
+  }
+
+  function rewindInagentGuards() {
+    if (S.inagent.rewindCharges <= 0 || S.inagent.guardHistory.length < 2) {
+      flashInagent('ХРОНО-МОДУЛЬ ПУСТ');
+      return true;
+    }
+    S.inagent.guards = S.inagent.guardHistory[1].map((guard) => ({ ...guard }));
+    S.inagent.guardHistory = [];
+    S.inagent.rewindCharges -= 1;
+    S.inagent.openDoors = [];
+    S.inagent.doorTimer = 0;
+    S.inagent.decoyTarget = null;
+    flashInagent('ОХРАНА ОТМОТАНА НА 2 ШАГА');
+    drawInagent();
+    updateInagentHud();
+    return true;
   }
 
   function showInagentTransition(nextLevel) {
@@ -446,6 +496,11 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.openDoors = [];
     S.inagent.doorTimer = 0;
     S.inagent.decoyTarget = null;
+    S.inagent.guardHistory = [];
+    if (level === 0) {
+      S.inagent.rewindCharges = 0;
+      S.inagent.rewindCollected = false;
+    }
     setInagentScreen(null);
     drawInagent();
     updateInagentHud();
@@ -453,6 +508,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   function stepInagent(dr, dc) {
     if (!S.inagent.open || S.inagent.state !== 'play') return;
+    const prevPlayer = { ...S.inagent.player };
     const nr = S.inagent.player.r + dr;
     const nc = S.inagent.player.c + dc;
     if (inagentIsSecret(nr, nc)) {
@@ -467,10 +523,16 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.moves += 1;
 
     const lvl = inagentLevel();
+    const prevGuards = S.inagent.guards.map((guard) => ({ ...guard }));
     const switchNode = inagentSwitchAt(nr, nc);
     if (lvl.plans && !S.inagent.hasPlans && nr === lvl.plans.r && nc === lvl.plans.c) {
       S.inagent.hasPlans = true;
       flashInagent('ПЛАНЫ ПОЛУЧЕНЫ — БЕГИ К ВЫХОДУ!');
+    }
+    if (lvl.pickup && !S.inagent.rewindCollected && nr === lvl.pickup.r && nc === lvl.pickup.c) {
+      S.inagent.rewindCollected = true;
+      S.inagent.rewindCharges = 1;
+      flashInagent('ХРОНО-МОДУЛЬ НАЙДЕН — НАЖМИ Q ДЛЯ ОТМОТКИ');
     }
     if (switchNode) activateInagentSwitch(switchNode);
     if (lvl.exit && S.inagent.hasPlans && nr === lvl.exit.r && nc === lvl.exit.c) {
@@ -480,7 +542,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
     tickInagentDoorState();
     S.inagent.guards.forEach(moveInagentGuard);
-    if (inagentHit()) {
+    S.inagent.guardHistory = [prevGuards, ...S.inagent.guardHistory].slice(0, 3);
+    if (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuards, S.inagent.guards)) {
       showInagentEnd(false);
       updateInagentHud();
       return;
@@ -518,6 +581,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       event.preventDefault();
       initInagent(0);
       return true;
+    }
+    if (event.key === 'q' || event.key === 'Q' || event.key === 'й' || event.key === 'Й') {
+      event.preventDefault();
+      return rewindInagentGuards();
     }
     const move = {
       ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0], ц: [-1, 0], Ц: [-1, 0],
