@@ -89,6 +89,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 2, c: 11 },
+      hiddenPassages: [{ r: 8, c: 2 }],
       guards: [{ r: 6, c: 7 }],
       switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
       pickups: [
@@ -279,6 +280,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         }
       };
       ensureInside(level.secret, 'секрет');
+      (level.hiddenPassages || []).forEach((passage, passageIdx) => {
+        if (
+          passage.r < 0 || passage.r >= INAGENT_ROWS ||
+          passage.c < 0 || passage.c >= INAGENT_COLS
+        ) {
+          issues.push(`Сектор ${levelIdx + 1}: тайный проход ${passageIdx + 1} выходит за границы карты.`);
+          return;
+        }
+        const row = level.map[passage.r];
+        if (row && row[passage.c] !== '#') {
+          issues.push(`Сектор ${levelIdx + 1}: тайный проход ${passageIdx + 1} должен быть спрятан в стене.`);
+        }
+      });
       ensureInside(level.plans, 'планы');
       ensureInside(level.exit, 'выход');
       (level.guards || []).forEach((guard, guardIdx) => ensureInside(guard, `охранник ${guardIdx + 1}`));
@@ -331,12 +345,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return !!secret && secret.r === r && secret.c === c;
   }
 
+  function inagentIsHiddenPassage(r, c) {
+    const hiddenPassages = inagentLevel().hiddenPassages || [];
+    return hiddenPassages.some((passage) => passage.r === r && passage.c === c);
+  }
+
   function inagentOutOfBounds(r, c) {
     return r < 0 || r >= INAGENT_ROWS || c < 0 || c >= INAGENT_COLS;
   }
 
   function inagentWall(r, c) {
-    if (inagentIsSecret(r, c)) return false;
+    if (inagentIsSecret(r, c) || inagentIsHiddenPassage(r, c)) return false;
     if (inagentOutOfBounds(r, c)) return true;
     if (S.inagent.openDoors.some((door) => door.r === r && door.c === c)) return false;
     const row = inagentLevel().map[r];
@@ -543,6 +562,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         const doorOpen = S.inagent.openDoors.some((door) => door.r === r && door.c === c);
         const switchNode = inagentSwitchAt(r, c);
         const isWallCell = !row || row[c] === '#';
+        const isHiddenPassage = inagentIsHiddenPassage(r, c);
         const cellDelay = ((c / INAGENT_COLS) * 0.58) + ((r / INAGENT_ROWS) * 0.14);
         const cellProgress = Math.max(0, Math.min(1, (revealProgress - cellDelay) / 0.25));
         if (revealProgress < 1 && c > revealFrontier + 1 && cellProgress <= 0) {
@@ -572,6 +592,18 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
             ctx.strokeStyle = `rgba(200,255,0,${(0.03 + secretPulse * 0.06) * cellProgress})`;
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 7.5, y + 7.5, INAGENT_CELL - 15, INAGENT_CELL - 15);
+          } else if (isHiddenPassage) {
+            const passageGlow = 0.22 + secretPulse * 0.18;
+            ctx.strokeStyle = `rgba(126,230,255,${passageGlow * cellProgress})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + INAGENT_CELL * 0.24, y + INAGENT_CELL * 0.18);
+            ctx.lineTo(x + INAGENT_CELL * 0.76, y + INAGENT_CELL * 0.18);
+            ctx.moveTo(x + INAGENT_CELL * 0.18, y + INAGENT_CELL * 0.28);
+            ctx.lineTo(x + INAGENT_CELL * 0.18, y + INAGENT_CELL * 0.76);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(126,230,255,${(0.03 + secretPulse * 0.035) * cellProgress})`;
+            ctx.fillRect(x + 8, y + 8, INAGENT_CELL - 16, INAGENT_CELL - 16);
           }
         } else {
           ctx.fillStyle = `rgba(8,8,8,${0.15 + cellProgress * 0.85})`;
