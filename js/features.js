@@ -708,10 +708,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       flashInagent('МИН НЕТ');
       return true;
     }
-    const nearGuard = S.inagent.guards.some((guard) => (
+    const adjacentGuards = S.inagent.guards.filter((guard) => (
       Math.abs(guard.r - S.inagent.player.r) + Math.abs(guard.c - S.inagent.player.c) === 1
     ));
-    if (!nearGuard) {
+    if (!adjacentGuards.length) {
       flashInagent('ДЛЯ МИНЫ НУЖНО ПОДОЙТИ ВПЛОТНУЮ К ОХРАНЕ');
       drawInagent();
       updateInagentHud();
@@ -724,9 +724,11 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       return true;
     }
     S.inagent.mineCharges -= 1;
-    S.inagent.mines.push({ r: S.inagent.player.r, c: S.inagent.player.c });
-    flashInagent('МИНА УСТАНОВЛЕНА — ЖДИ ДЕТОНАЦИИ');
-    stepInagent(0, 0, { isAction: true });
+    const detonatedIds = new Set(adjacentGuards.map((guard) => guard.id));
+    S.inagent.guards = S.inagent.guards.filter((guard) => !detonatedIds.has(guard.id));
+    flashInagent(`МИНА СРАБОТАЛА // -${adjacentGuards.length} ОХРАНЫ`);
+    drawInagent();
+    updateInagentHud();
     return true;
   }
 
