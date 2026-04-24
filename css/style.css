@@ -958,6 +958,10 @@ body.snake-mode .cell-label {
   gap: 8px;
 }
 
+#phase3-main-field.inagent-mode.inagent-playing .inagent-topbar {
+  display: none;
+}
+
 .inagent-game-wrap {
   position: relative;
   width: 100%;
@@ -1438,6 +1442,20 @@ body.snake-mode .cell-label {
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+}
+
+#phase3-main-field.inagent-mode.inagent-playing .inagent-shell {
+  width: min(600px, 80vw);
+  gap: 8px;
+}
+
+#phase3-main-field.inagent-mode.inagent-playing .inagent-stage {
+  gap: 6px;
+}
+
+#phase3-main-field.inagent-mode.inagent-playing .inagent-game-wrap,
+#phase3-main-field.inagent-mode.inagent-playing .inagent-hud {
+  max-width: 100%;
 }
 
 #inagent-inline #inagent-canvas {

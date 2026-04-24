@@ -208,6 +208,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentStartScreen) R.inagentStartScreen.classList.toggle('active', mode === 'intro');
     if (R.inagentEndScreen) R.inagentEndScreen.classList.toggle('active', mode === 'end');
     if (R.inagentTransScreen) R.inagentTransScreen.classList.toggle('active', mode === 'trans');
+    if (R.inagentHost) R.inagentHost.dataset.screen = mode || 'play';
   }
 
   function setInagentFieldState({ mode = false, launching = false, playing = false } = {}) {
