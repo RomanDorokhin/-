@@ -109,6 +109,10 @@ body.secret-input-inverted #phase-cat {
   transform: scaleX(-1);
 }
 
+body.secret-input-inverted #inagent-inline {
+  transform: scaleX(-1);
+}
+
 #phase1 { z-index: 10; }
 #phase1 .hint {
   font-family: 'VT323', monospace;
