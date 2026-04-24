@@ -1513,17 +1513,23 @@ body.snake-mode .cell-label {
   font-size: clamp(13px, 1.3vw, 18px);
   color: rgba(238, 244, 248, 0.94);
   text-shadow: none;
+  width: 100%;
+  padding: 14px 16px;
+  border-left: 2px solid rgba(111, 229, 255, 0.72);
+  background: rgba(13, 18, 27, 0.92);
+  text-align: left;
 }
 
 #inagent-inline .inagent-start-rules {
   display: grid;
   gap: 6px;
   width: min(560px, 100%);
-  border: 0;
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
+  padding: 12px 16px;
+  background: rgba(10, 14, 21, 0.78);
+  border-radius: 10px;
+  border: 1px solid rgba(97, 122, 139, 0.16);
   box-shadow: none;
+  text-align: left;
 }
 
 #inagent-inline .inagent-screen-hint {
@@ -1531,10 +1537,18 @@ body.snake-mode .cell-label {
   letter-spacing: 0.04em;
   color: rgba(159, 176, 188, 0.7);
   max-width: 520px;
+  text-align: left;
 }
 
 #inagent-inline .inagent-start-kicker {
   display: none;
+}
+
+#inagent-inline .inagent-start-rules-title {
+  font-size: clamp(10px, 0.95vw, 12px);
+  letter-spacing: 0.12em;
+  color: rgba(162, 183, 196, 0.6);
+  text-transform: uppercase;
 }
 
 #inagent-inline .inagent-start-actions {
@@ -1550,12 +1564,12 @@ body.snake-mode .cell-label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid rgba(102, 135, 158, 0.18);
   background: rgba(7, 10, 16, 0.94);
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
   border-radius: 14px;
-  padding: clamp(18px, 2vw, 22px);
+  padding: clamp(20px, 2.4vw, 24px);
 }
 
 #phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card {
@@ -1646,26 +1660,28 @@ body.snake-mode .cell-label {
 
 #inagent-inline #inagent-hud-goal {
   width: 100%;
-  color: rgba(214, 225, 232, 0.96);
+  color: rgba(242, 246, 248, 0.98);
   font-weight: 600;
+  font-size: clamp(12px, 1.05vw, 14px);
 }
 
 #inagent-inline #inagent-hud-resources,
 #inagent-inline #inagent-hud-state {
   flex: 1 1 260px;
+  color: rgba(151, 167, 179, 0.78);
 }
 
 #inagent-inline .inagent-start-hint-keys {
   font-size: clamp(10px, 0.95vw, 12px);
   letter-spacing: 0.04em;
-  color: rgba(159, 176, 188, 0.62);
+  color: rgba(128, 144, 154, 0.56);
 }
 
 #inagent-inline .inagent-msg {
   min-height: 16px;
   font-size: clamp(10px, 0.95vw, 12px);
   letter-spacing: 0.03em;
-  color: rgba(159, 176, 188, 0.84);
+  color: rgba(184, 196, 205, 0.9);
 }
 
 #inagent-inline.inagent-transform-in {
