@@ -222,6 +222,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentHost) {
       R.inagentHost.classList.remove('active');
       R.inagentHost.classList.remove('inagent-transform-in');
+      R.inagentHost.classList.remove('inagent-intro-open');
       R.inagentHost.setAttribute('aria-hidden', 'true');
     }
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
@@ -896,6 +897,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.state = 'intro';
     R.inagentHost.classList.add('active');
     R.inagentHost.classList.remove('inagent-transform-in');
+    R.inagentHost.classList.add('inagent-intro-open');
     R.inagentHost.setAttribute('aria-hidden', 'false');
     document.body.classList.remove('inagent-embedded');
     document.body.classList.add('inagent-intro');
@@ -914,6 +916,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   function startInagentFromIntro() {
     if (!S.inagent.open || !R.inagentHost) return;
+    R.inagentHost.classList.remove('inagent-intro-open');
     if (R.noiseGrid) R.noiseGrid.classList.add('inagent-transform-out');
     R.inagentHost.classList.add('inagent-transform-in');
     setTimeout(() => {
@@ -944,6 +947,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   function handleInagentKey(event) {
     if (!S.inagent.open) return false;
+    if (event.key === 'b' || event.key === 'B' || event.key === 'и' || event.key === 'И') {
+      event.preventDefault();
+      return true;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       closeInagent();
