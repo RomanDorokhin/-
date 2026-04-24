@@ -1319,11 +1319,11 @@ body.inagent-embedded .section-title.inagent-title-bar {
 }
 
 #inagent-inline {
-  width: min(600px, 80vw);
+  width: min(94vw, 1400px);
   display: none;
   align-items: center;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 #inagent-inline.active {
@@ -1332,6 +1332,100 @@ body.inagent-embedded .section-title.inagent-title-bar {
 
 .inagent-inline-shell {
   width: 100%;
+  max-width: 1400px;
+}
+
+#inagent-inline .inagent-topbar {
+  max-width: 1320px;
+  gap: 16px;
+}
+
+#inagent-inline .inagent-title {
+  font-size: clamp(58px, 8vw, 118px);
+  letter-spacing: 0.12em;
+}
+
+#inagent-inline .inagent-subtitle {
+  font-size: clamp(14px, 1.8vw, 24px);
+  letter-spacing: 0.12em;
+}
+
+#inagent-inline #inagent-close {
+  font-size: clamp(22px, 2.4vw, 34px);
+  padding: 10px 16px;
+}
+
+#inagent-inline .inagent-game-wrap {
+  max-width: 1320px;
+}
+
+#inagent-inline #inagent-canvas {
+  min-height: min(70vh, 860px);
+  object-fit: contain;
+}
+
+#inagent-inline .inagent-screen {
+  gap: 16px;
+  padding: clamp(24px, 3.5vw, 48px);
+  background: rgba(0, 0, 0, 0.92);
+}
+
+#inagent-inline .inagent-screen-title {
+  font-size: clamp(56px, 7.8vw, 122px);
+  letter-spacing: 0.12em;
+}
+
+#inagent-inline .inagent-screen-copy {
+  font-size: clamp(17px, 2vw, 28px);
+  letter-spacing: 0.08em;
+  line-height: 1.55;
+}
+
+#inagent-inline .inagent-screen-copy-strong {
+  font-size: clamp(20px, 2.4vw, 34px);
+  color: #dfff7a;
+  text-shadow: 0 0 16px rgba(200, 255, 0, 0.24);
+}
+
+#inagent-inline .inagent-start-rules {
+  display: grid;
+  gap: 4px;
+  width: min(980px, 92%);
+  border: 1px solid rgba(200, 255, 0, 0.24);
+  padding: clamp(12px, 1.8vw, 20px);
+  background: rgba(200, 255, 0, 0.04);
+}
+
+#inagent-inline .inagent-screen-hint {
+  font-size: clamp(14px, 1.4vw, 20px);
+  letter-spacing: 0.08em;
+  color: rgba(200, 255, 0, 0.65);
+}
+
+#inagent-inline .inagent-btn {
+  font-size: clamp(16px, 1.8vw, 24px);
+  letter-spacing: 0.16em;
+  padding: 14px 28px;
+}
+
+#inagent-inline .inagent-btn-primary {
+  background: rgba(200, 255, 0, 0.16);
+  border-color: rgba(223, 255, 122, 0.95);
+  color: #f2ffd0;
+  box-shadow: 0 0 20px rgba(200, 255, 0, 0.25);
+}
+
+#inagent-inline .inagent-hud {
+  max-width: 1320px;
+  padding: 10px 14px;
+  font-size: clamp(12px, 1.35vw, 20px);
+  letter-spacing: 0.09em;
+}
+
+#inagent-inline .inagent-msg {
+  min-height: 24px;
+  font-size: clamp(12px, 1.25vw, 18px);
+  letter-spacing: 0.08em;
 }
 
 .typed::after {

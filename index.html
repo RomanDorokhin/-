@@ -116,11 +116,17 @@
             <div class="inagent-game-wrap">
               <canvas id="inagent-canvas" width="480" height="400"></canvas>
               <div id="inagent-start-screen" class="inagent-screen">
-                <p class="inagent-screen-title">СЕКРЕТНЫЙ РЕЖИМ</p>
-                <p class="inagent-screen-copy">ТЫ ОТКРЫЛ ИНАГЕНТ</p>
-                <p class="inagent-screen-copy">WASD / СТРЕЛКИ — движение &nbsp; Q — фаза &nbsp; M — мина &nbsp; E — EMP &nbsp; R — рестарт</p>
-                <p class="inagent-screen-hint">ИГРА ЗАПУСКАЕТСЯ В ОСНОВНОМ КВАДРАТЕ</p>
-                <button id="inagent-start-btn" class="inagent-btn" type="button">[ СТАРТ ]</button>
+                <p class="inagent-screen-title">СЕКРЕТНЫЙ РЕЖИМ: ИНАГЕНТ</p>
+                <p class="inagent-screen-copy inagent-screen-copy-strong">ЦЕЛЬ: ПРОЙДИ ВСЕ СЕКТОРЫ И ВЫЙДИ ЖИВЫМ</p>
+                <div class="inagent-start-rules">
+                  <p class="inagent-screen-copy"><b>WASD / СТРЕЛКИ</b> — ДВИЖЕНИЕ</p>
+                  <p class="inagent-screen-copy"><b>Q</b> — ФАЗА (ШАГ СКВОЗЬ ПРЕГРАДУ)</p>
+                  <p class="inagent-screen-copy"><b>M</b> — МИНА (КОГДА РЯДОМ ОХРАНА)</p>
+                  <p class="inagent-screen-copy"><b>E</b> — EMP (ЗАМОРОЗИТЬ ОХРАНУ)</p>
+                  <p class="inagent-screen-copy"><b>R</b> — РЕСТАРТ СЕКРЕТНОГО РЕЖИМА</p>
+                </div>
+                <p class="inagent-screen-hint">СОВЕТ: НЕ ТРАТЬ РЕСУРСЫ БЕЗ НУЖДЫ</p>
+                <button id="inagent-start-btn" class="inagent-btn inagent-btn-primary" type="button">[ НАЧАТЬ ОПЕРАЦИЮ ]</button>
               </div>
               <div id="inagent-end-screen" class="inagent-screen">
                 <div id="inagent-end-title" class="inagent-end-title"></div>
