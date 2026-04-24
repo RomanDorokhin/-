@@ -223,10 +223,10 @@ window.OMS = window.OMS || {};
       if (e.key === 'Enter' && S.currentPhase >= 1) {
         if (OMS.secrets) OMS.secrets.markMeaninglessAction('enter_news');
         const pressNews = [
-          'Блогер получил 5 лет за репост картинки',
-          'Студента отчислили за пост во ВКонтакте',
-          'Пенсионер осуждён за лайк в соцсети',
-          'Роскомнадзор заблокировал 500 000 сайтов',
+          'АРХИВ ОБНОВЛЁН // НОВЫЕ ШУМЫ ДОБАВЛЕНЫ',
+          'СИСТЕМА НАШЛА ЕЩЁ ОДИН СЛЕД',
+          'КАНАЛ ПЕРЕСТРОЕН // ПРОВЕРЬ СОСЕДНИЕ ЯЧЕЙКИ',
+          'ФОНОВЫЙ МОДУЛЬ ЗАВЕРШИЛ ЦИКЛ СКАНИРОВАНИЯ',
         ];
         const news = pressNews[Math.floor(Math.random() * pressNews.length)];
         const el = document.createElement('div');
@@ -235,22 +235,6 @@ window.OMS = window.OMS || {};
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 500);
         OMS.audioApi.playGlitchSound();
-      }
-
-      if (e.key.length === 1 && /[а-яёА-ЯЁa-zA-Z]/i.test(e.key)) {
-        S.typedBuffer += e.key;
-        clearTimeout(S.typedTimer);
-        S.typedTimer = setTimeout(() => {
-          const name = S.typedBuffer.trim();
-          if (/^[а-яёА-ЯЁa-zA-Z]{3,12}$/.test(name) && S.currentPhase >= 1) {
-            const upper = name.toUpperCase();
-            try { localStorage.setItem('oms_name', upper); } catch (err) {}
-            R.statusLine.textContent = `ИДЕНТИФИКАЦИЯ: ${upper}`;
-            R.statusLine.style.opacity = '1';
-            setTimeout(() => { R.statusLine.style.opacity = '0'; }, 2800);
-          }
-          S.typedBuffer = '';
-        }, 800);
       }
 
     });

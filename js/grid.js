@@ -6,21 +6,13 @@ window.OMS = window.OMS || {};
   const C = OMS.constants;
   const R = OMS.refs;
 
-  let userCity = '';
-  fetch('https://ipapi.co/json/')
-    .then(r => r.json())
-    .then(d => { userCity = (d.city || '').toUpperCase(); })
-    .catch(() => {});
-
   const flipPositive = ['ТЫ МЕНЯ НАШЁЛ', 'НАЖМИ ЕЩЁ', 'ПРОДОЛЖАЙ', 'СИГНАЛ', 'ЭХО', 'КОНТАКТ', 'СМОТРИ', 'ДА', 'ВЕРНО', 'ТЕПЛО'];
   const flipNegative = ['НЕ ТРАТЬ ВРЕМЯ', 'НЕТ', 'ЗАПИСАНО', 'ОШИБКА', 'ЗАЧЕМ', 'МЫ ВИДИМ', 'ФИЛЬТР', 'НЕВЕРНО', 'СТОП', 'ОПАСНО'];
 
   function getFlipContent() {
     const roll = Math.random();
     if (roll < 0.08) {
-      let nm = '';
-      try { nm = localStorage.getItem('oms_name') || ''; } catch (e) {}
-      const opts = [nm || 'НЕИЗВЕСТЕН', userCity || 'НЕИЗВЕСТНО', (navigator.language || '??').toUpperCase()];
+      const opts = ['НЕИЗВЕСТЕН', 'СИГНАЛ', 'КАНАЛ', 'НОДА', 'TRACE'];
       return { text: opts[Math.floor(Math.random() * opts.length)], type: 'red' };
     }
     if (roll < 0.35) return { text: flipNegative[Math.floor(Math.random() * flipNegative.length)], type: 'red' };
@@ -113,7 +105,7 @@ window.OMS = window.OMS || {};
     if (!sc) return;
     sc.classList.add('sponsor');
     const lbl = sc.querySelector('.cell-label');
-    if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+    if (lbl) lbl.textContent = 'АРКАДА';
   }
 
   OMS.grid = {

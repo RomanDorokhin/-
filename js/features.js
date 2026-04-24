@@ -7,14 +7,14 @@ window.OMS = window.OMS || {};
   const sponsorTrail = [];
   const MAX_SPONSOR_TRAIL = 20;
   const INAGENT_START_TRANSITION_MS = 720;
-  const casinoAds = [
-    { name: 'КАЗИНО', text: 'ВЫИГРАЙ МИЛЛИОН! 100% БОНУС! ТЫ СЛЕДУЮЩИЙ ПОБЕДИТЕЛЬ!', color: '#ff0' },
-    { name: 'КАЗИНО', text: 'ДЖЕКПОТ $1,000,000! РЕГИСТРИРУЙСЯ СЕЙЧАС! ТОЛЬКО СЕГОДНЯ!', color: '#f80' },
-    { name: 'КАЗИНО', text: 'БЕСПЛАТНЫЕ СПИНЫ! ИГРАЙ БЕСПЛАТНО! ВЫВОДИ ДЕНЬГИ!', color: '#0ff' },
-    { name: 'КАЗИНО', text: 'VIP СТАТУС СРАЗУ! БЕЗ ДЕПОЗИТА! БОНУС 500%!', color: '#ff4' },
-    { name: 'КАЗИНО', text: 'СОРВИ КУШ! СЛОТЫ 24/7! МГНОВЕННЫЙ ВЫВОД!', color: '#f0f' },
+  const signalAds = [
+    { name: 'АРКАДА', text: 'ТЕСТ СИГНАЛА. СОБЕРИ ТРИ СИМВОЛА И ПОСМОТРИ РЕАКЦИЮ СИСТЕМЫ.', color: '#ff0' },
+    { name: 'АРКАДА', text: 'ПРОВЕРКА КАНАЛА. НАЖМИ И ЗАПУСТИ КОРОТКИЙ ЦИКЛ ОТКЛИКА.', color: '#f80' },
+    { name: 'АРКАДА', text: 'СВЕТОВОЙ МОДУЛЬ АКТИВЕН. ПРОКРУТИ БАРАБАНЫ И НАБЛЮДАЙ ЗА РИТМОМ.', color: '#0ff' },
+    { name: 'АРКАДА', text: 'ВНУТРЕННИЙ АВТОМАТ. НИКАКИХ СТАВОК, ТОЛЬКО УЗОРЫ И СИМВОЛЫ.', color: '#ff4' },
+    { name: 'АРКАДА', text: 'СЛУЖЕБНЫЙ РЕЖИМ. СОВПАДЕНИЯ ВЫЗЫВАЮТ ВИЗУАЛЬНУЮ ВСПЫШКУ.', color: '#f0f' },
   ];
-  const slotSymbols = ['🍒', '7️⃣', '💎', '⭐', '🔔', '🍋', '💰', '🎰', '👑', '🃏'];
+  const slotSymbols = ['◇', '○', '△', '☆', '□', '✦', '◈', '◎', '◉', '◌'];
 
   function clearQuestCellMark(cell) {
     if (!cell) return;
@@ -44,7 +44,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const handler = () => {
       const now = Date.now();
       const state = cell._sponsorTapState;
-      if (now - state.lastTap < 420) showCasinoAd();
+      if (now - state.lastTap < 420) showSignalArcade();
       state.lastTap = now;
     };
     cell._sponsorClickHandler = handler;
@@ -1446,7 +1446,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (baseCell) {
       baseCell.classList.add('sponsor');
       const lbl = baseCell.querySelector('.cell-label');
-      if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+      if (lbl) lbl.textContent = 'АРКАДА';
       bindSponsorDoubleClick(baseCell);
     }
     S.sponsorGridX = 2;
@@ -1638,12 +1638,12 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     updateSponsorQuestUi();
   }
 
-  function showCasinoAd() {
-    if (S.casinoShown || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
-    S.casinoShown = true;
-    const ad = casinoAds[Math.floor(Math.random() * casinoAds.length)];
+  function showSignalArcade() {
+    if (S.signalArcadeShown || S.currentPhase !== 2 || S.lifetimeLimitReached) return;
+    S.signalArcadeShown = true;
+    const ad = signalAds[Math.floor(Math.random() * signalAds.length)];
     const overlay = document.createElement('div');
-    overlay.id = 'casino-overlay';
+    overlay.id = 'signal-arcade-overlay';
     overlay.style.cssText = `
       position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:700;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -1652,7 +1652,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     overlay.innerHTML = `
       <div style="font-size:clamp(28px,5vw,52px);color:${ad.color};
         text-shadow:0 0 30px ${ad.color};letter-spacing:0.1em;
-        animation:casinoBlink 0.4s step-end infinite;">${ad.name}</div>
+        animation:arcadePulse 0.4s step-end infinite;">${ad.name}</div>
 
       <div id="slot-machine" style="
         display:flex; gap:4px; padding:16px 24px;
@@ -1664,19 +1664,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           border:2px solid rgba(255,255,255,0.2); background:#000;
           display:flex; align-items:center; justify-content:center;
           font-size:48px;
-        ">🍒</div>
+        ">◇</div>
         <div class="slot-reel" data-reel="1" style="
           width:80px; height:80px; overflow:hidden; position:relative;
           border:2px solid rgba(255,255,255,0.2); background:#000;
           display:flex; align-items:center; justify-content:center;
           font-size:48px;
-        ">7️⃣</div>
+        ">○</div>
         <div class="slot-reel" data-reel="2" style="
           width:80px; height:80px; overflow:hidden; position:relative;
           border:2px solid rgba(255,255,255,0.2); background:#000;
           display:flex; align-items:center; justify-content:center;
           font-size:48px;
-        ">💎</div>
+        ">△</div>
       </div>
 
       <button id="slot-spin-btn" type="button" style="
@@ -1684,7 +1684,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         background:${ad.color}; color:#000; border:none;
         padding:10px 40px; cursor:pointer; letter-spacing:0.2em;
         box-shadow:0 0 20px ${ad.color};
-      ">КРУТИТЬ!</button>
+      ">ЗАПУСТИТЬ</button>
 
       <div id="slot-result" style="
         font-size:clamp(16px,2.5vw,28px); color:#fff;
@@ -1695,9 +1695,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         letter-spacing:0.15em;">${ad.text}</div>
 
       <div style="font-size:clamp(9px,1.2vw,12px);color:rgba(255,255,255,0.15);
-        letter-spacing:0.2em;">18+ НАЖМИ ВНЕ ОКНА ЧТОБЫ ЗАКРЫТЬ</div>
+        letter-spacing:0.2em;">НАЖМИ ВНЕ ОКНА ЧТОБЫ ЗАКРЫТЬ</div>
     `;
-    ensureCasinoStyle();
+    ensureArcadeStyle();
     const spinBtn = overlay.querySelector('#slot-spin-btn');
     const reels = [...overlay.querySelectorAll('.slot-reel')];
     const resultEl = overlay.querySelector('#slot-result');
@@ -1709,27 +1709,27 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
     overlay.addEventListener('click', () => {
       overlay.remove();
-      S.casinoShown = false;
+      S.signalArcadeShown = false;
     });
     document.body.appendChild(overlay);
     OMS.effects.triggerGlitch(260);
     OMS.audioApi.playGlitchSound();
-    if (OMS.secrets) OMS.secrets.unlockSecret('casino', { source: 'sponsor' });
+    if (OMS.secrets) OMS.secrets.unlockSecret('signal_arcade', { source: 'arcade' });
   }
 
-  function ensureCasinoStyle() {
-    if (document.getElementById('casino-style')) return;
+  function ensureArcadeStyle() {
+    if (document.getElementById('arcade-style')) return;
     const style = document.createElement('style');
-    style.id = 'casino-style';
+    style.id = 'arcade-style';
     style.textContent = `
-      @keyframes casinoBlink { 0%,100%{opacity:1} 50%{opacity:0.7} }
+      @keyframes arcadePulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
       .slot-reel-spinning { animation: reelBlur 0.1s linear infinite; }
       @keyframes reelBlur { 0%,100%{filter:blur(0)} 50%{filter:blur(2px)} }
     `;
     document.head.appendChild(style);
   }
 
-  function playCasinoSound(type) {
+  function playArcadeSound(type) {
     const A = OMS.audio;
     if (!A.ctx || !A.masterGain) return;
     const t = A.ctx.currentTime;
@@ -1815,7 +1815,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const intervals = reels.map((reel, idx) => setInterval(() => {
       reel.classList.add('slot-reel-spinning');
       reel.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
-      playCasinoSound('spin');
+      playArcadeSound('spin');
     }, 80 + idx * 15));
 
     const roll = Math.random();
@@ -1842,7 +1842,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         clearInterval(intervals[idx]);
         reel.classList.remove('slot-reel-spinning');
         reel.textContent = final[idx];
-        playCasinoSound('stop');
+        playArcadeSound('stop');
         if (idx !== 2) return;
 
         setTimeout(() => {
@@ -1851,25 +1851,25 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           if (win) {
             if (resultEl) {
               resultEl.style.color = accentColor;
-              resultEl.textContent = 'ДЖЕКПОТ! ТЫ ВЫИГРАЛ!';
+              resultEl.textContent = 'ПОЛНОЕ СОВПАДЕНИЕ!';
             }
-            playCasinoSound('jackpot');
+            playArcadeSound('jackpot');
             OMS.effects.triggerExplosion();
           } else if (twoMatch) {
             if (resultEl) {
               resultEl.style.color = '#fff';
-              resultEl.textContent = 'ПОЧТИ... ЕЩЁ РАЗ!';
+              resultEl.textContent = 'ПОЧТИ СОВПАЛО. ЕЩЁ ЦИКЛ.';
             }
-            playCasinoSound('coin');
+            playArcadeSound('coin');
           } else {
             if (resultEl) {
               resultEl.style.color = 'rgba(255,255,255,0.4)';
-              resultEl.textContent = 'НЕ ПОВЕЗЛО. КРУТИ ЕЩЁ.';
+              resultEl.textContent = 'НОВЫЙ УЗОР НЕ СОБРАН.';
             }
-            playCasinoSound('lose');
+            playArcadeSound('lose');
           }
           spinBtn.disabled = false;
-          spinBtn.textContent = 'КРУТИТЬ!';
+          spinBtn.textContent = 'ЗАПУСТИТЬ';
         }, 300);
       }, 900 + idx * 700);
     });
@@ -1895,7 +1895,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (!sc) return;
     sc.classList.add('sponsor');
     const lbl = sc.querySelector('.cell-label');
-    if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+    if (lbl) lbl.textContent = 'АРКАДА';
     bindSponsorDoubleClick(sc);
   }
 
@@ -1921,7 +1921,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       if (newCell) {
         newCell.classList.add('sponsor');
         const lbl = newCell.querySelector('.cell-label');
-        if (lbl) lbl.textContent = 'ПАРА-КЛУБ';
+        if (lbl) lbl.textContent = 'АРКАДА';
         bindSponsorDoubleClick(newCell);
         OMS.effects.showTooltip('★ СПОНСОР СЕАНСА ★', newCell);
         setTimeout(OMS.effects.hideTooltip, 700);
@@ -2087,20 +2087,30 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
   }
 
-  function openNews(url) {
+  function openNews(entryId) {
+  const archiveEntries = {
+    'archive-alpha': 'АРХИВ АЛЬФА\nЛОКАЛЬНОЕ ОБНОВЛЕНИЕ ЗАВЕРШЕНО.\nВНЕШНИЕ ПОДКЛЮЧЕНИЯ НЕ ТРЕБУЮТСЯ.',
+    'archive-beta': 'АРХИВ БЕТА\nСЕТКА ШУМОВ ГОТОВА К НОВОМУ СЕАНСУ.\nДОСТУПНЫ ТОЛЬКО ВНУТРЕННИЕ КАНАЛЫ.',
+    'archive-gamma': 'АРХИВ ГАММА\nВИЗУАЛЬНЫЙ МОДУЛЬ СТАБИЛЕН.\nСИГНАЛЫ СОХРАНЕНЫ В ПАМЯТИ БРАУЗЕРА.',
+    'archive-delta': 'АРХИВ ДЕЛЬТА\nКОЛЛЕКЦИЯ СЕКРЕТОВ ОБНОВЛЕНА.\nИСТОРИЯ СЕАНСА ОСТАЛАСЬ ЛОКАЛЬНОЙ.',
+    'archive-epsilon': 'АРХИВ ЭПСИЛОН\nШУМ ОЧИЩЕН.\nРЕЗЕРВНЫЕ ПОДСКАЗКИ ПОДГОТОВЛЕНЫ.',
+    'archive-zeta': 'АРХИВ ЗЕТА\nБЕЗОПАСНЫЙ РЕЖИМ АКТИВЕН.\nВНЕШНИЕ ССЫЛКИ ОТКЛЮЧЕНЫ.',
+    'archive-eta': 'АРХИВ ЭТА\nНАБЛЮДАТЕЛЬНАЯ ПАНЕЛЬ ЗАКРЫТА.\nИСПОЛЬЗУЙ E ДЛЯ ВОЗВРАТА.',
+  };
   const tip = document.createElement('div');
   tip.style.cssText = `
     position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
     font-family:'VT323',monospace;font-size:clamp(16px,2.5vw,28px);
-    color:#000;background:#fff;padding:12px 24px;z-index:1000;
-    border:2px solid #c00;text-align:center;letter-spacing:0.1em;
+    color:#fff;background:#111;padding:16px 24px;z-index:1000;
+    border:2px solid rgba(255,255,255,0.2);text-align:center;letter-spacing:0.08em;
+    line-height:1.5;white-space:pre-line;
   `;
-  tip.textContent = 'ПЕРЕХОД НА ВНЕШНИЙ РЕСУРС...';
+  tip.textContent = archiveEntries[entryId] || 'ЛОКАЛЬНАЯ ЗАМЕТКА НЕДОСТУПНА';
+  tip.addEventListener('click', () => tip.remove());
   document.body.appendChild(tip);
   setTimeout(() => {
-    tip.remove();
-    window.open(url, '_blank');
-  }, 700);
+    if (tip.parentNode) tip.remove();
+  }, 2200);
   }
 
   function toggleEmergencyExit() {
@@ -2192,7 +2202,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   });
 
   OMS.features = {
-    showCasinoAd,
+    showSignalArcade,
     beginSponsorQuestPlay,
     moveSponsorCell,
     pauseSponsorQuest,

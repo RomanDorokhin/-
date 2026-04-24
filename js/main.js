@@ -411,11 +411,9 @@
     const el = document.createElement('div');
     el.id = 'secret-console';
     el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;height:220px;background:rgba(0,0,0,0.97);border-top:1px solid rgba(0,255,65,0.3);z-index:600;font-family:\"Share Tech Mono\",monospace;font-size:11px;color:#00ff41;padding:10px;overflow-y:auto;letter-spacing:0.1em;';
-    let nm = 'UNKNOWN';
-    try { nm = localStorage.getItem('oms_name') || 'UNKNOWN'; } catch (e) {}
     el.innerHTML = `
       <div style="color:rgba(0,255,65,0.4);margin-bottom:8px;">┌─ SYSTEM CONSOLE v2.0 ─────────────────────────────┐</div>
-      <div>> ИДЕНТИФИКАТОР: ${nm}</div>
+      <div>> ПРОФИЛЬ: LOCAL SESSION</div>
       <div>> ВИЗИТОВ: ${OMS.visit.data.count}</div>
       <div>> АКТИВНОЕ ВРЕМЯ: ${Math.floor(state.activeSeconds / 60)} мин ${state.activeSeconds % 60} сек</div>
       <div>> БАН АКТИВЕН: ${window.__banned ? 'ДА' : 'НЕТ'}</div>
