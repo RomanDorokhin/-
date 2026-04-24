@@ -137,10 +137,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 3, c: 11 },
-      guards: [{ r: 5, c: 7 }, { r: 7, c: 7 }, { r: 7, c: 1 }],
-      switches: [{ r: 5, c: 9, doors: [{ r: 4, c: 8 }] }],
+      guards: [{ r: 7, c: 4 }, { r: 7, c: 7 }, { r: 7, c: 1 }],
+      switches: [{ r: 5, c: 9, doors: [{ r: 3, c: 10 }] }],
       pickups: [
-        { r: 2, c: 1, kind: 'phase' },
+        { r: 1, c: 9, kind: 'mine' },
         { r: 7, c: 2, kind: 'mine' },
         { r: 5, c: 1, kind: 'medkit' },
         { r: 1, c: 8, kind: 'emp' },
