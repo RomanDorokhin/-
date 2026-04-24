@@ -463,9 +463,9 @@ body.snake-mode .cell-label {
 }
 
 #phase3-main-field.inagent-mode.inagent-launching #noise-grid {
-  opacity: 0.14;
-  transform: scale(1.015);
-  filter: blur(1.8px) brightness(1.05);
+  opacity: 0.08;
+  transform: scale(1.04);
+  filter: blur(2.6px) brightness(1.14) saturate(0.82);
 }
 
 #phase3-main-field.inagent-mode.inagent-playing {
@@ -509,10 +509,10 @@ body.snake-mode .cell-label {
       calc((var(--grid-row, 5) - 4.5) * 8px),
       0
     )
-    scale(0.68)
+    scale(0.56)
     rotate(calc((var(--grid-col, 0) - var(--grid-row, 0)) * 2deg));
-  filter: blur(3px);
-  transition-delay: calc((var(--grid-wave, 0) * 16ms));
+  filter: blur(4px) brightness(1.25);
+  transition-delay: calc((var(--grid-wave, 0) * 20ms));
 }
 
 #phase3-main-field.inagent-mode.inagent-launching .noise-cell .cell-front,
@@ -986,10 +986,13 @@ body.snake-mode .cell-label {
   padding: 20px;
   background: rgba(0, 0, 0, 0.9);
   text-align: center;
+  opacity: 0;
+  transition: opacity 260ms ease, transform 260ms ease, filter 260ms ease;
 }
 
 .inagent-screen.active {
   display: flex;
+  opacity: 1;
 }
 
 .inagent-screen-title {
@@ -1477,6 +1480,24 @@ body.snake-mode .cell-label {
     rgba(0, 0, 0, 0.9);
 }
 
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen {
+  display: flex;
+  opacity: 1;
+  animation: inagentStartScreenDissolve 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(210, 255, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(40, 160, 255, 0.1), rgba(0, 0, 0, 0.04));
+  mix-blend-mode: screen;
+  animation: inagentStartScreenFlash 520ms ease forwards;
+}
+
 #inagent-inline .inagent-screen-title {
   font-size: clamp(26px, 4.4vw, 50px);
   letter-spacing: 0.06em;
@@ -1562,6 +1583,21 @@ body.snake-mode .cell-label {
   padding: clamp(18px, 2vw, 24px);
 }
 
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card {
+  animation: inagentStartCardDissolve 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > * {
+  animation: inagentStartCardContentFade 420ms ease forwards;
+  animation-delay: calc(var(--intro-stagger, 0) * 40ms);
+}
+
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > :nth-child(1) { --intro-stagger: 0; }
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > :nth-child(2) { --intro-stagger: 1; }
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > :nth-child(3) { --intro-stagger: 2; }
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > :nth-child(4) { --intro-stagger: 3; }
+#phase3-main-field.inagent-mode.inagent-launching #inagent-start-screen .inagent-start-card > :nth-child(5) { --intro-stagger: 4; }
+
 #inagent-inline .inagent-start-body {
   display: flex;
   flex-direction: column;
@@ -1613,7 +1649,7 @@ body.snake-mode .cell-label {
 }
 
 #inagent-inline.inagent-transform-in {
-  animation: inagentInlineBoot 430ms ease;
+  animation: inagentInlineBoot 720ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #inagent-inline.inagent-transform-in[data-screen="play"]::before {
@@ -1630,8 +1666,8 @@ body.snake-mode .cell-label {
 #phase3-main-field.inagent-mode.inagent-launching .inagent-hud,
 #phase3-main-field.inagent-mode.inagent-launching .inagent-msg,
 #phase3-main-field.inagent-mode.inagent-launching .inagent-topbar {
-  opacity: 0.38;
-  transform: translateY(4px);
+  opacity: 0.16;
+  transform: translateY(8px);
 }
 
 body.inagent-mode #scanlines,
@@ -1659,27 +1695,89 @@ body.inagent-mode #secrets-hud {
     transform: scale(1);
   }
   35% {
-    opacity: 0.9;
-    filter: blur(1px) brightness(1.15);
-    transform: scale(1.02);
+    opacity: 0.82;
+    filter: blur(1.5px) brightness(1.18);
+    transform: scale(1.03);
   }
   100% {
     opacity: 0;
-    filter: blur(4px) brightness(1.35);
-    transform: scale(1.08);
+    filter: blur(6px) brightness(1.45);
+    transform: scale(1.12);
   }
 }
 
 @keyframes inagentInlineBoot {
   0% {
     opacity: 0;
-    filter: blur(4px);
-    transform: scale(0.96);
+    filter: blur(16px) brightness(1.24);
+    transform: scale(0.92);
+  }
+  55% {
+    opacity: 0.92;
+    filter: blur(5px) brightness(1.08);
+    transform: scale(0.985);
   }
   100% {
     opacity: 1;
     filter: blur(0px);
     transform: scale(1);
+  }
+}
+
+@keyframes inagentStartCardDissolve {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1) translateY(0);
+    clip-path: inset(0 round 18px);
+  }
+  38% {
+    opacity: 0.92;
+    filter: blur(1px);
+    transform: scale(1.018) translateY(-2px);
+    clip-path: inset(0 round 18px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(18px);
+    transform: scale(1.14) translateY(10px);
+    clip-path: inset(34% 22% 30% 22% round 48px);
+  }
+}
+
+@keyframes inagentStartCardContentFade {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(7px);
+  }
+}
+
+@keyframes inagentStartScreenDissolve {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(14px);
+  }
+}
+
+@keyframes inagentStartScreenFlash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

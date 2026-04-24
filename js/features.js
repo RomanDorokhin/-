@@ -6,6 +6,7 @@ window.OMS = window.OMS || {};
   const R = OMS.refs;
   const sponsorTrail = [];
   const MAX_SPONSOR_TRAIL = 20;
+  const INAGENT_START_TRANSITION_MS = 720;
   const casinoAds = [
     { name: 'КАЗИНО', text: 'ВЫИГРАЙ МИЛЛИОН! 100% БОНУС! ТЫ СЛЕДУЮЩИЙ ПОБЕДИТЕЛЬ!', color: '#ff0' },
     { name: 'КАЗИНО', text: 'ДЖЕКПОТ $1,000,000! РЕГИСТРИРУЙСЯ СЕЙЧАС! ТОЛЬКО СЕГОДНЯ!', color: '#f80' },
@@ -234,6 +235,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       R.inagentHost.classList.remove('active');
       R.inagentHost.classList.remove('inagent-transform-in');
       R.inagentHost.classList.remove('inagent-intro-open');
+      R.inagentHost.classList.remove('inagent-start-armed');
       R.inagentHost.setAttribute('aria-hidden', 'true');
     }
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
@@ -994,37 +996,41 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function openInagentMode() {
     if (S.currentPhase < 1 || S.lifetimeLimitReached || !R.inagentHost) return;
     S.inagent.open = true;
-    S.inagent.state = 'intro';
     R.inagentHost.classList.add('active');
     R.inagentHost.classList.remove('inagent-transform-in');
+    R.inagentHost.classList.remove('inagent-start-armed');
     R.inagentHost.classList.add('inagent-intro-open');
     R.inagentHost.setAttribute('aria-hidden', 'false');
     document.body.classList.add('inagent-mode');
     setInagentFieldState({ mode: true });
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
     initInagent(0);
+    S.inagent.state = 'intro';
     setInagentScreen('intro');
     setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ // ИНАГЕНТ', 1800);
   }
 
   function startInagentFromIntro() {
-    if (!S.inagent.open || !R.inagentHost) return;
+    if (!S.inagent.open || !R.inagentHost || S.inagent.state === 'launching') return;
+    S.inagent.state = 'launching';
+    if (S.inagent.transitionTimer) clearTimeout(S.inagent.transitionTimer);
     R.inagentHost.classList.add('inagent-start-armed');
-    R.inagentHost.classList.remove('inagent-intro-open');
-    setInagentScreen(null);
+    R.inagentHost.dataset.screen = 'play';
     setInagentFieldState({ mode: true, launching: true });
     if (R.noiseGrid) R.noiseGrid.classList.add('inagent-transform-out');
     R.inagentHost.classList.add('inagent-transform-in');
-    setTimeout(() => {
+    S.inagent.transitionTimer = setTimeout(() => {
+      S.inagent.transitionTimer = null;
       if (!S.inagent.open) return;
       if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
       setInagentFieldState({ mode: true, playing: true });
       R.inagentHost.classList.remove('inagent-transform-in');
       R.inagentHost.classList.remove('inagent-start-armed');
+      R.inagentHost.classList.remove('inagent-intro-open');
       initInagent(0);
       setInagentScreen(null);
       playInagentReveal();
-    }, 380);
+    }, INAGENT_START_TRANSITION_MS);
   }
 
   function toggleInagentMode() {
@@ -1044,6 +1050,10 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (event.key === 'Escape') {
       event.preventDefault();
       closeInagent();
+      return true;
+    }
+    if (S.inagent.state === 'launching' || S.inagent.state === 'intro') {
+      event.preventDefault();
       return true;
     }
     if (event.key === 'r' || event.key === 'R' || event.key === 'к' || event.key === 'К') {
