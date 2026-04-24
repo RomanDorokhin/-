@@ -95,7 +95,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 7, c: 2, kind: 'phase' },
         { r: 5, c: 3, kind: 'mine' },
       ],
-      flamers: [],
+      flamers: [
+        { r: 3, c: 9, dir: 'left', len: 2, period: 5, on: 2, phase: 0 },
+      ],
       plans: null,
       exit: null,
     },
@@ -119,7 +121,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 5, c: 2, kind: 'mine' },
         { r: 7, c: 6, kind: 'emp' },
       ],
-      flamers: [],
+      flamers: [
+        { r: 3, c: 2, dir: 'right', len: 2, period: 6, on: 2, phase: 1 },
+      ],
       plans: null,
       exit: null,
     },
@@ -246,6 +250,82 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
   }
 
+  function validateInagentLevels() {
+    const issues = [];
+    INAGENT_LEVELS.forEach((level, levelIdx) => {
+      if (!Array.isArray(level.map) || level.map.length !== INAGENT_ROWS) {
+        issues.push(`Сектор ${levelIdx + 1}: карта должна содержать ${INAGENT_ROWS} строк.`);
+        return;
+      }
+      level.map.forEach((row, rowIdx) => {
+        if (typeof row !== 'string' || row.length !== INAGENT_COLS) {
+          issues.push(`Сектор ${levelIdx + 1}: строка ${rowIdx + 1} должна содержать ${INAGENT_COLS} клеток.`);
+        }
+      });
+      const seenPickups = new Set();
+      const ensureInside = (node, label) => {
+        if (!node) return;
+        if (
+          node.r < 0 || node.r >= INAGENT_ROWS ||
+          node.c < 0 || node.c >= INAGENT_COLS
+        ) {
+          issues.push(`Сектор ${levelIdx + 1}: ${label} выходит за границы карты.`);
+          return;
+        }
+        const row = level.map[node.r];
+        if (!row) return;
+        if (row[node.c] === '#' && !(label.startsWith('дверь') || label.startsWith('секрет'))) {
+          issues.push(`Сектор ${levelIdx + 1}: ${label} стоит внутри стены (${node.r}, ${node.c}).`);
+        }
+      };
+      ensureInside(level.secret, 'секрет');
+      ensureInside(level.plans, 'планы');
+      ensureInside(level.exit, 'выход');
+      (level.guards || []).forEach((guard, guardIdx) => ensureInside(guard, `охранник ${guardIdx + 1}`));
+      (level.switches || []).forEach((switchNode, switchIdx) => {
+        ensureInside(switchNode, `пульт ${switchIdx + 1}`);
+        (switchNode.doors || []).forEach((door, doorIdx) => {
+          if (
+            door.r < 0 || door.r >= INAGENT_ROWS ||
+            door.c < 0 || door.c >= INAGENT_COLS
+          ) {
+            issues.push(`Сектор ${levelIdx + 1}: дверь ${switchIdx + 1}.${doorIdx + 1} выходит за границы карты.`);
+            return;
+          }
+          const row = level.map[door.r];
+          if (row && row[door.c] !== '#') {
+            issues.push(`Сектор ${levelIdx + 1}: дверь ${switchIdx + 1}.${doorIdx + 1} должна открывать стену.`);
+          }
+        });
+      });
+      (Array.isArray(level.pickups) ? level.pickups : []).forEach((pickup, pickupIdx) => {
+        ensureInside(pickup, `пикап ${pickupIdx + 1}`);
+        const key = `${pickup.r}:${pickup.c}:${pickup.kind}`;
+        if (seenPickups.has(key)) {
+          issues.push(`Сектор ${levelIdx + 1}: дублирующийся пикап ${pickup.kind} в (${pickup.r}, ${pickup.c}).`);
+        }
+        seenPickups.add(key);
+      });
+      (level.flamers || []).forEach((flamer, flamerIdx) => {
+        ensureInside(flamer, `огнемёт ${flamerIdx + 1}`);
+        if (!['left', 'right', 'up', 'down'].includes(flamer.dir)) {
+          issues.push(`Сектор ${levelIdx + 1}: огнемёт ${flamerIdx + 1} имеет неверное направление.`);
+        }
+        if ((flamer.len || 0) <= 0) {
+          issues.push(`Сектор ${levelIdx + 1}: у огнемёта ${flamerIdx + 1} должна быть длина луча > 0.`);
+        }
+      });
+      const startRow = level.map[1];
+      if (!startRow || startRow[1] === '#') {
+        issues.push(`Сектор ${levelIdx + 1}: стартовая клетка (1,1) должна быть проходимой.`);
+      }
+    });
+    if (issues.length) {
+      console.warn('[InAgent] level validation issues:\n' + issues.map((issue) => `- ${issue}`).join('\n'));
+    }
+    return issues;
+  }
+
   function inagentIsSecret(r, c) {
     const secret = inagentLevel().secret;
     return !!secret && secret.r === r && secret.c === c;
@@ -335,44 +415,70 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return { cells, set };
   }
 
+  function inagentGoalText(level = inagentLevel()) {
+    if (level.exit) {
+      return S.inagent.hasPlans
+        ? 'ЦЕЛЬ: ДОЙТИ ДО EXIT'
+        : 'ЦЕЛЬ: НАЙТИ ПЛАНЫ И ДОБРАТЬСЯ ДО EXIT';
+    }
+    return level.switches && level.switches.length
+      ? 'ЦЕЛЬ: ОБОЙТИ ОХРАНУ, АКТИВИРОВАТЬ SW И НАЙТИ ТАЙНЫЙ ПРОХОД'
+      : 'ЦЕЛЬ: ОБОЙТИ ОХРАНУ И НАЙТИ ТАЙНЫЙ ПРОХОД';
+  }
+
+  function inagentInventoryText() {
+    return [
+      `HP ${S.inagent.lives}/${S.inagent.maxLives}`,
+      `PH ${S.inagent.phaseCharges}${S.inagent.phaseActive ? ' [ГОТОВО]' : ''}`,
+      `MN ${S.inagent.mineCharges}`,
+      `EMP ${S.inagent.empCharges}`,
+    ].join(' // ');
+  }
+
+  function inagentStatusText(level = inagentLevel()) {
+    const parts = [
+      `ОХРАНА ${S.inagent.guards.length}`,
+      `МИНЫ НА ПОЛЕ ${S.inagent.mines.length}`,
+    ];
+    if (S.inagent.guardsFrozen > 0) parts.push(`ОГЛУШЕНИЕ ${S.inagent.guardsFrozen}`);
+    if (S.inagent.openDoors.length) parts.push(`ДВЕРЬ ${S.inagent.doorTimer}`);
+    if ((level.flamers || []).length) parts.push(`ОГОНЬ ${level.flamers.length}`);
+    return parts.join(' // ');
+  }
+
+  function inagentActionHint(level = inagentLevel(), pickupsLeft = inagentPickups().filter(inagentPickupAvailable)) {
+    if (S.inagent.flashTimer > 0) return S.inagent.flashMsg;
+    if (S.inagent.phaseActive) return 'ФАЗА ВЗВЕДЕНА — СЛЕДУЮЩИЙ ШАГ МОЖНО СДЕЛАТЬ СКВОЗЬ СТЕНУ';
+    if (S.inagent.guardsFrozen > 0) return 'EMP АКТИВЕН — ОХРАНА ВРЕМЕННО НЕ ДВИГАЕТСЯ';
+    if (pickupsLeft.length) {
+      return 'ПОДБЕРИ РЕСУРСЫ: Q — ФАЗА // M — ПОСТАВИТЬ МИНУ // E — EMP';
+    }
+    if (level.exit) {
+      return S.inagent.hasPlans ? 'ПЛАНЫ У ТЕБЯ — ИДИ К EXIT' : 'СОБЕРИ ПЛАНЫ, ЗАТЕМ ИЩИ EXIT';
+    }
+    return level.switches && level.switches.length
+      ? 'ИЩИ ПУЛЬТ SW И СМОТРИ, КАКАЯ СТЕНА ОТКРОЕТСЯ'
+      : 'СЕКТОР ЧИСТЫЙ — ОСМОТРИ СТЕНЫ И НАЙДИ ТАЙНЫЙ ПРОХОД';
+  }
+
   function updateInagentHud() {
-    if (!R.inagentHudSector || !R.inagentHudMoves || !R.inagentHudState || !R.inagentMsg) return;
+    if (
+      !R.inagentHudSector ||
+      !R.inagentHudMoves ||
+      !R.inagentHudGoal ||
+      !R.inagentHudResources ||
+      !R.inagentHudState ||
+      !R.inagentMsg
+    ) return;
     const lvl = inagentLevel();
     const pickupsLeft = inagentPickups().filter(inagentPickupAvailable);
     R.inagentHudSector.textContent = `СЕКТОР: ${S.inagent.level + 1}/${INAGENT_LEVELS.length}`;
     R.inagentHudMoves.textContent = `ХОД: ${S.inagent.moves}`;
-    const stateParts = [`HP: ${S.inagent.lives}/${S.inagent.maxLives}`];
-    if (S.inagent.phaseCharges > 0 || S.inagent.phaseActive) {
-      stateParts.push(`PH:${S.inagent.phaseCharges}${S.inagent.phaseActive ? '[ARM]' : ''}`);
-    }
-    if (S.inagent.mineCharges > 0) stateParts.push(`MN:${S.inagent.mineCharges}`);
-    if (S.inagent.empCharges > 0) stateParts.push(`EMP:${S.inagent.empCharges}`);
-    if (S.inagent.guardsFrozen > 0) stateParts.push(`FREEZE:${S.inagent.guardsFrozen}`);
-    if (S.inagent.openDoors.length) stateParts.push(`ДВЕРИ:${S.inagent.doorTimer}`);
-    if (lvl.plans) stateParts.push(S.inagent.hasPlans ? 'ПЛАНЫ:✓' : 'ПЛАНЫ:?');
-    R.inagentHudState.textContent = stateParts.join(' // ');
-    if (S.inagent.flashTimer > 0) {
-      R.inagentMsg.textContent = S.inagent.flashMsg;
-      R.inagentMsg.style.color = '#ffcc00';
-    } else if (S.inagent.phaseActive) {
-      R.inagentMsg.textContent = 'ФАЗОВЫЙ ШАГ ВЗВЕДЁН — СЛЕДУЮЩИЙ ХОД СКВОЗЬ ПРЕГРАДЫ';
-      R.inagentMsg.style.color = '#7ee6ff';
-    } else if (S.inagent.guardsFrozen > 0) {
-      R.inagentMsg.textContent = 'EMP АКТИВЕН — ОХРАНА НЕ ДВИГАЕТСЯ';
-      R.inagentMsg.style.color = '#7ee6ff';
-    } else if (pickupsLeft.length) {
-      R.inagentMsg.textContent = 'Q — ФАЗА // M — МИНА // E — EMP // ИЩИ РЕСУРСЫ';
-      R.inagentMsg.style.color = '#7ee6ff';
-    } else if (S.inagent.mineCharges > 0 || S.inagent.empCharges > 0 || S.inagent.phaseCharges > 0) {
-      R.inagentMsg.textContent = 'ЖДИ МОМЕНТ И ТРАТЬ ЗАРЯДЫ ВЫГОДНО';
-      R.inagentMsg.style.color = '#7ee6ff';
-    } else if (lvl.plans) {
-      R.inagentMsg.textContent = S.inagent.hasPlans ? 'БЕГИ К ВЫХОДУ!' : 'НАЙДИ ПЛАНЫ [?]';
-      R.inagentMsg.style.color = '#c8ff0055';
-    } else {
-      R.inagentMsg.textContent = (lvl.switches && lvl.switches.length) ? 'ИЩИ ПУЛЬТ И ТАЙНЫЙ ПРОХОД' : 'НАЙДИ ТАЙНЫЙ ПРОХОД';
-      R.inagentMsg.style.color = '#c8ff0033';
-    }
+    R.inagentHudGoal.textContent = inagentGoalText(lvl);
+    R.inagentHudResources.textContent = inagentInventoryText();
+    R.inagentHudState.textContent = inagentStatusText(lvl);
+    R.inagentMsg.textContent = inagentActionHint(lvl, pickupsLeft);
+    R.inagentMsg.style.color = S.inagent.flashTimer > 0 ? '#ffcc00' : '#7ee6ff';
   }
 
   function getInagentRevealProgress() {
@@ -708,27 +814,25 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       flashInagent('МИН НЕТ');
       return true;
     }
-    const adjacentGuards = S.inagent.guards.filter((guard) => (
-      Math.abs(guard.r - S.inagent.player.r) + Math.abs(guard.c - S.inagent.player.c) === 1
+    const tileOccupiedByMine = S.inagent.mines.some((mine) => (
+      mine.r === S.inagent.player.r && mine.c === S.inagent.player.c
     ));
-    if (!adjacentGuards.length) {
-      flashInagent('ДЛЯ МИНЫ НУЖНО ПОДОЙТИ ВПЛОТНУЮ К ОХРАНЕ');
+    if (tileOccupiedByMine) {
+      flashInagent('МИНА УЖЕ ЛЕЖИТ ПОД НОГАМИ');
       drawInagent();
       updateInagentHud();
       return true;
     }
-    if (S.inagent.mines.some((mine) => mine.r === S.inagent.player.r && mine.c === S.inagent.player.c)) {
-      flashInagent('МИНА УЖЕ СТОИТ');
+    if (S.inagent.phaseActive) {
+      flashInagent('СНАЧАЛА ПОТРАТЬ ФАЗУ ИЛИ СНИМИ ЕЁ ХОДОМ');
       drawInagent();
       updateInagentHud();
       return true;
     }
     S.inagent.mineCharges -= 1;
-    const detonatedIds = new Set(adjacentGuards.map((guard) => guard.id));
-    S.inagent.guards = S.inagent.guards.filter((guard) => !detonatedIds.has(guard.id));
-    flashInagent(`МИНА СРАБОТАЛА // -${adjacentGuards.length} ОХРАНЫ`);
-    drawInagent();
-    updateInagentHud();
+    S.inagent.mines.push({ r: S.inagent.player.r, c: S.inagent.player.c });
+    flashInagent('МИНА УСТАНОВЛЕНА — ЛЮБОЙ, КТО ВСТУПИТ, ПОДОРВЁТСЯ');
+    stepInagent(0, 0, { isAction: true });
     return true;
   }
 
@@ -771,27 +875,47 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
 
   function resolveInagentMines() {
-    if (!S.inagent.mines.length || !S.inagent.guards.length) return 0;
+    if (!S.inagent.mines.length) return { guardDetonations: 0, playerDetonated: false };
     const mineMap = new Map(S.inagent.mines.map((mine) => [inagentCellKey(mine.r, mine.c), mine]));
     const survivors = [];
-    let detonations = 0;
+    let guardDetonations = 0;
     S.inagent.guards.forEach((guard) => {
       const key = inagentCellKey(guard.r, guard.c);
       if (mineMap.has(key)) {
         mineMap.delete(key);
-        detonations += 1;
+        guardDetonations += 1;
       } else {
         survivors.push(guard);
       }
     });
-    if (!detonations) return 0;
+    const playerKey = inagentCellKey(S.inagent.player.r, S.inagent.player.c);
+    const playerDetonated = mineMap.has(playerKey);
+    if (playerDetonated) mineMap.delete(playerKey);
+    if (!guardDetonations && !playerDetonated) {
+      return { guardDetonations: 0, playerDetonated: false };
+    }
     S.inagent.guards = survivors;
     S.inagent.mines = Array.from(mineMap.values());
-    return detonations;
+    return { guardDetonations, playerDetonated };
   }
 
   function resolveInagentFlames() {
-    return { playerBurned: false, guardsBurned: 0 };
+    const activeFlames = inagentFlameCellsForTick();
+    if (!activeFlames.set.size) return { playerBurned: false, guardsBurned: 0 };
+    const survivors = [];
+    let guardsBurned = 0;
+    S.inagent.guards.forEach((guard) => {
+      if (activeFlames.set.has(inagentCellKey(guard.r, guard.c))) {
+        guardsBurned += 1;
+      } else {
+        survivors.push(guard);
+      }
+    });
+    S.inagent.guards = survivors;
+    return {
+      playerBurned: activeFlames.set.has(inagentCellKey(S.inagent.player.r, S.inagent.player.c)),
+      guardsBurned,
+    };
   }
 
   function showInagentTransition(nextLevel) {
@@ -972,16 +1096,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       });
     }
 
-    const detonations = resolveInagentMines();
+    const mineResult = resolveInagentMines();
     const flameResult = resolveInagentFlames({ phaseStep });
-    if (detonations) flashInagent(`МИНА СРАБОТАЛА // -${detonations} ОХРАНЫ`);
+    if (mineResult.guardDetonations) flashInagent(`МИНА СРАБОТАЛА // -${mineResult.guardDetonations} ОХРАНЫ`);
     if (flameResult.guardsBurned) flashInagent(`ОГНЕМЕТ // -${flameResult.guardsBurned} ОХРАНЫ`);
     if (S.inagent.guardsFrozen > 0) S.inagent.guardsFrozen -= 1;
 
     const caught = !phaseStep && (inagentHit() || inagentCrossed(prevPlayer, S.inagent.player, prevGuardMap, S.inagent.guards));
-    if (flameResult.playerBurned || caught) {
-      if (flameResult.playerBurned) flashInagent('ОГНЕМЕТ ЗАДЕЛ ТЕБЯ');
-      if (caught && !flameResult.playerBurned) flashInagent('ОХРАНА ПЕРЕХВАТИЛА ТЕБЯ');
+    if (mineResult.playerDetonated || flameResult.playerBurned || caught) {
+      if (mineResult.playerDetonated) flashInagent('ТЫ НАСТУПИЛ НА МИНУ');
+      if (flameResult.playerBurned && !mineResult.playerDetonated) flashInagent('ОГНЕМЕТ ЗАДЕЛ ТЕБЯ');
+      if (caught && !flameResult.playerBurned && !mineResult.playerDetonated) flashInagent('ОХРАНА ПЕРЕХВАТИЛА ТЕБЯ');
       handleInagentLifeLoss();
       return;
     }
@@ -1054,7 +1179,16 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       closeInagent();
       return true;
     }
-    if (S.inagent.state === 'launching' || S.inagent.state === 'intro') {
+    if (S.inagent.state === 'intro') {
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+        event.preventDefault();
+        startInagentFromIntro();
+        return true;
+      }
+      event.preventDefault();
+      return true;
+    }
+    if (S.inagent.state === 'launching') {
       event.preventDefault();
       return true;
     }
