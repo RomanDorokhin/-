@@ -1318,16 +1318,27 @@ body.inagent-embedded .section-title.inagent-title-bar {
   display: none;
 }
 
+#noise-grid.inagent-transform-out {
+  display: grid;
+  animation: inagentGridMorph 420ms ease forwards;
+  transform-origin: center center;
+}
+
 #inagent-inline {
   width: min(88vw, 980px);
   display: none;
   align-items: center;
   justify-content: center;
   margin-top: 8px;
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 260ms ease, transform 260ms ease;
 }
 
 #inagent-inline.active {
   display: flex;
+  opacity: 1;
+  transform: scale(1);
 }
 
 .inagent-inline-shell {
@@ -1440,6 +1451,41 @@ body.inagent-embedded .section-title.inagent-title-bar {
   min-height: 18px;
   font-size: clamp(10px, 1vw, 13px);
   letter-spacing: 0.05em;
+}
+
+#inagent-inline.inagent-transform-in {
+  animation: inagentInlineBoot 430ms ease;
+}
+
+@keyframes inagentGridMorph {
+  0% {
+    opacity: 1;
+    filter: blur(0px) brightness(1);
+    transform: scale(1);
+  }
+  35% {
+    opacity: 0.9;
+    filter: blur(1px) brightness(1.15);
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(4px) brightness(1.35);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes inagentInlineBoot {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
 }
 
 .typed::after {
