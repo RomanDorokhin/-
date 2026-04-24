@@ -223,6 +223,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       R.inagentHost.classList.remove('active');
       R.inagentHost.setAttribute('aria-hidden', 'true');
     }
+    document.body.classList.remove('inagent-embedded');
+    if (R.phase3Top) R.phase3Top.classList.remove('inagent-embedded');
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-active');
     setInagentScreen('intro');
     if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
@@ -885,6 +887,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function openInagentMode() {
     if (S.currentPhase < 1 || S.lifetimeLimitReached || !R.inagentHost) return;
     S.inagent.open = true;
+    R.inagentHost.classList.add('active');
     R.inagentHost.setAttribute('aria-hidden', 'false');
     document.body.classList.add('inagent-embedded');
     if (R.phase3Top) R.phase3Top.classList.add('inagent-embedded');
