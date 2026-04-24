@@ -438,14 +438,44 @@ body.snake-mode .cell-label {
   grid-template-columns: repeat(10, 1fr);
   gap: 3px;
   width: min(600px, 80vw);
+  margin: 0 auto;
+  transition: opacity 280ms ease, transform 280ms ease, filter 280ms ease;
 }
 
-body.inagent-embedded #noise-grid {
-  display: none;
+#phase3-main-field {
+  position: relative;
+  width: min(88vw, 980px);
+  min-height: min(70vh, 640px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
 }
 
-body.inagent-embedded #phase3-bottom {
-  display: none;
+#phase3-main-field.inagent-intro {
+  filter: drop-shadow(0 0 30px rgba(160, 220, 255, 0.08));
+}
+
+#phase3-main-field.inagent-intro #noise-grid {
+  opacity: 0.22;
+  transform: scale(0.985);
+  filter: blur(0.6px) saturate(0.75);
+}
+
+#phase3-main-field.inagent-launching {
+  filter: drop-shadow(0 0 42px rgba(200, 255, 0, 0.16));
+}
+
+#phase3-main-field.inagent-embedded {
+  min-height: 0;
+}
+
+#phase3-main-field.inagent-embedded #noise-grid {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(1.05);
+  filter: blur(4px);
+  pointer-events: none;
 }
 
 .noise-cell {
@@ -833,62 +863,6 @@ body.inagent-embedded #phase3-bottom {
 
 #backpack-modal.open {
   display: flex;
-}
-
-#inagent-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 650;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(200, 255, 0, 0.08), transparent 38%),
-    rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(3px);
-}
-
-#inagent-overlay.open {
-  display: flex;
-}
-
-#inagent-overlay.embedded {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  display: none;
-  align-items: stretch;
-  justify-content: stretch;
-  padding: 0;
-  background: transparent;
-  backdrop-filter: none;
-  width: min(600px, 80vw);
-}
-
-#inagent-overlay.embedded.open {
-  display: block;
-}
-
-#inagent-overlay.embedded .inagent-shell {
-  width: 100%;
-  max-width: none;
-}
-
-#inagent-overlay.embedded .inagent-topbar {
-  max-width: none;
-}
-
-#inagent-overlay.embedded .inagent-game-wrap {
-  max-width: none;
-}
-
-#inagent-overlay.embedded #inagent-canvas {
-  width: 100%;
-}
-
-body.inagent-embedded .section-title.inagent-title-bar {
-  color: rgba(200, 255, 0, 0.75);
 }
 
 .inagent-topbar {
@@ -1309,13 +1283,31 @@ body.inagent-embedded .section-title.inagent-title-bar {
   gap: 12px;
 }
 
-#phase3-top.inagent-embedded .section-title,
+#phase3-top .section-title,
+#phase3-bottom {
+  transition: opacity 260ms ease, transform 260ms ease, filter 260ms ease;
+}
+
+#phase3-top.inagent-intro .section-title {
+  opacity: 0.26;
+}
+
+#phase3-top.inagent-embedded .section-title {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+#phase3-top.inagent-launching + #phase3-bottom,
 #phase3-top.inagent-embedded + #phase3-bottom {
-  display: none;
+  opacity: 0.04;
+  transform: translateY(12px);
+  filter: blur(3px);
+  pointer-events: none;
 }
 
 #noise-grid.inagent-active {
-  display: none;
+  pointer-events: none;
 }
 
 #noise-grid.inagent-transform-out {
@@ -1325,34 +1317,44 @@ body.inagent-embedded .section-title.inagent-title-bar {
 }
 
 #inagent-inline {
-  width: min(88vw, 980px);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: none;
   align-items: center;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: 0;
   opacity: 0;
   transform: scale(0.96);
-  transition: opacity 260ms ease, transform 260ms ease;
+  transition: opacity 260ms ease, transform 260ms ease, filter 260ms ease;
+  z-index: 2;
+  pointer-events: none;
 }
 
 #inagent-inline.active {
   display: flex;
   opacity: 1;
   transform: scale(1);
+  pointer-events: auto;
 }
 
 #inagent-inline.inagent-intro-open {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  max-width: none;
+  width: 100%;
+  height: 100%;
   margin: 0;
-  padding: 20px;
-  z-index: 640;
+  padding: clamp(10px, 2vw, 18px);
+  z-index: 3;
   background:
-    radial-gradient(circle at 50% 12%, rgba(120, 200, 255, 0.14), transparent 35%),
-    rgba(0, 0, 0, 0.88);
+    radial-gradient(circle at 50% 18%, rgba(120, 200, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(4, 10, 18, 0.8), rgba(0, 0, 0, 0.9));
+  border: 1px solid rgba(170, 220, 255, 0.14);
+  border-radius: 16px;
+  box-shadow:
+    0 0 28px rgba(120, 200, 255, 0.12),
+    inset 0 0 36px rgba(120, 200, 255, 0.05);
   align-items: center;
   justify-content: center;
 }
@@ -1363,7 +1365,7 @@ body.inagent-embedded .section-title.inagent-title-bar {
 }
 
 #inagent-inline.inagent-intro-open .inagent-inline-shell {
-  width: min(88vw, 980px);
+  width: min(100%, 920px);
 }
 
 #inagent-inline .inagent-topbar {
@@ -1388,6 +1390,12 @@ body.inagent-embedded .section-title.inagent-title-bar {
 
 #inagent-inline .inagent-game-wrap {
   max-width: 920px;
+}
+
+#phase3-main-field.inagent-embedded #inagent-inline {
+  position: relative;
+  inset: auto;
+  height: auto;
 }
 
 #inagent-inline #inagent-canvas {
@@ -1475,6 +1483,38 @@ body.inagent-embedded .section-title.inagent-title-bar {
 
 #inagent-inline.inagent-transform-in {
   animation: inagentInlineBoot 430ms ease;
+}
+
+body.inagent-intro #scanlines,
+body.inagent-intro #noise,
+body.inagent-intro #coords,
+body.inagent-intro #countdown,
+body.inagent-intro #visitor-id,
+body.inagent-intro #waveform,
+body.inagent-intro #global-presence,
+body.inagent-intro #idle-msg,
+body.inagent-intro #session-time,
+body.inagent-intro #mute-btn,
+body.inagent-intro #vol-wrap,
+body.inagent-intro #visit-badge,
+body.inagent-intro #konami-hint,
+body.inagent-intro #secrets-hud,
+body.inagent-embedded #scanlines,
+body.inagent-embedded #noise,
+body.inagent-embedded #coords,
+body.inagent-embedded #countdown,
+body.inagent-embedded #visitor-id,
+body.inagent-embedded #waveform,
+body.inagent-embedded #global-presence,
+body.inagent-embedded #idle-msg,
+body.inagent-embedded #session-time,
+body.inagent-embedded #mute-btn,
+body.inagent-embedded #vol-wrap,
+body.inagent-embedded #visit-badge,
+body.inagent-embedded #konami-hint,
+body.inagent-embedded #secrets-hud {
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 @keyframes inagentGridMorph {
@@ -1970,6 +2010,12 @@ body.inagent-embedded .section-title.inagent-title-bar {
     align-items: center;
   }
 
+  #phase3-main-field {
+    width: 100vw;
+    min-height: min(72vh, 560px);
+    padding: 0 2px;
+  }
+
   .section-title { font-size: 7px; letter-spacing: 0.2em; }
 
   #noise-grid {
@@ -1977,6 +2023,42 @@ body.inagent-embedded .section-title.inagent-title-bar {
     width: 100vw;
     gap: 1px;
     padding: 0 2px;
+  }
+
+  #inagent-inline.inagent-intro-open {
+    inset: 0 2px;
+    padding: 6px;
+    border-radius: 10px;
+  }
+
+  #inagent-inline .inagent-topbar,
+  #inagent-inline .inagent-game-wrap,
+  #inagent-inline .inagent-hud {
+    max-width: 100%;
+  }
+
+  #inagent-inline #inagent-canvas {
+    min-height: 0;
+  }
+
+  #inagent-inline .inagent-screen-title {
+    font-size: clamp(24px, 8vw, 44px);
+  }
+
+  #inagent-inline .inagent-screen-copy,
+  #inagent-inline .inagent-msg,
+  #inagent-inline .inagent-hud {
+    font-size: 10px;
+  }
+
+  #inagent-inline .inagent-start-card {
+    width: 100%;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  #inagent-inline .inagent-start-rules {
+    width: 100%;
   }
 
   .noise-cell {

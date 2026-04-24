@@ -102,49 +102,51 @@
   <div id="phase3-inner">
     <div id="phase3-top">
       <div class="section-title">// MATRIX OF NOISE — SELECT A CHANNEL //</div>
-      <div id="noise-grid"></div>
-      <div id="inagent-inline" aria-hidden="true">
-        <div class="inagent-shell inagent-inline-shell">
-          <div class="inagent-topbar">
-            <div>
-              <div class="inagent-title">ИНАГЕНТ</div>
-              <div class="inagent-subtitle">CASTLE.EXE // SUPERHOT EDITION</div>
+      <div id="phase3-main-field">
+        <div id="noise-grid"></div>
+        <div id="inagent-inline" aria-hidden="true">
+          <div class="inagent-shell inagent-inline-shell">
+            <div class="inagent-topbar">
+              <div>
+                <div class="inagent-title">ИНАГЕНТ</div>
+                <div class="inagent-subtitle">CASTLE.EXE // SUPERHOT EDITION</div>
+              </div>
+              <button id="inagent-close" type="button">✕</button>
             </div>
-            <button id="inagent-close" type="button">✕</button>
-          </div>
-          <div class="inagent-stage">
-            <div class="inagent-game-wrap">
-              <canvas id="inagent-canvas" width="480" height="400"></canvas>
-              <div id="inagent-start-screen" class="inagent-screen">
-                <div class="inagent-start-card">
-                  <p class="inagent-screen-title">СЕКРЕТНЫЙ РЕЖИМ: ИНАГЕНТ</p>
-                  <p class="inagent-screen-copy inagent-screen-copy-strong">ЦЕЛЬ: ПРОЙДИ ВСЕ СЕКТОРЫ И ВЫЙДИ ЖИВЫМ</p>
-                  <div class="inagent-start-rules">
-                    <p class="inagent-screen-copy"><b>WASD / СТРЕЛКИ</b> — ДВИЖЕНИЕ</p>
-                    <p class="inagent-screen-copy"><b>Q</b> — ФАЗА (ШАГ СКВОЗЬ ПРЕГРАДУ)</p>
-                    <p class="inagent-screen-copy"><b>M</b> — МИНА (КОГДА РЯДОМ ОХРАНА)</p>
-                    <p class="inagent-screen-copy"><b>E</b> — EMP (ЗАМОРОЗИТЬ ОХРАНУ)</p>
-                    <p class="inagent-screen-copy"><b>R</b> — ПОЛНЫЙ РЕСТАРТ РЕЖИМА</p>
+            <div class="inagent-stage">
+              <div class="inagent-game-wrap">
+                <canvas id="inagent-canvas" width="480" height="400"></canvas>
+                <div id="inagent-start-screen" class="inagent-screen">
+                  <div class="inagent-start-card">
+                    <p class="inagent-screen-title">СЕКРЕТНЫЙ РЕЖИМ: ИНАГЕНТ</p>
+                    <p class="inagent-screen-copy inagent-screen-copy-strong">ЦЕЛЬ: ПРОЙДИ ВСЕ СЕКТОРЫ И ВЫЙДИ ЖИВЫМ</p>
+                    <div class="inagent-start-rules">
+                      <p class="inagent-screen-copy"><b>WASD / СТРЕЛКИ</b> — ДВИЖЕНИЕ</p>
+                      <p class="inagent-screen-copy"><b>Q</b> — ФАЗА (ШАГ СКВОЗЬ ПРЕГРАДУ)</p>
+                      <p class="inagent-screen-copy"><b>M</b> — МИНА (КОГДА РЯДОМ ОХРАНА)</p>
+                      <p class="inagent-screen-copy"><b>E</b> — EMP (ЗАМОРОЗИТЬ ОХРАНУ)</p>
+                      <p class="inagent-screen-copy"><b>R</b> — ПОЛНЫЙ РЕСТАРТ РЕЖИМА</p>
+                    </div>
+                    <p class="inagent-screen-hint">СОВЕТ: БЕРЕГИ РЕСУРСЫ И СЛЕДИ ЗА ПОЗИЦИЯМИ ОХРАНЫ</p>
+                    <button id="inagent-start-btn" class="inagent-btn inagent-btn-primary" type="button">[ НАЧАТЬ ОПЕРАЦИЮ ]</button>
                   </div>
-                  <p class="inagent-screen-hint">СОВЕТ: БЕРЕГИ РЕСУРСЫ И СЛЕДИ ЗА ПОЗИЦИЯМИ ОХРАНЫ</p>
-                  <button id="inagent-start-btn" class="inagent-btn inagent-btn-primary" type="button">[ НАЧАТЬ ОПЕРАЦИЮ ]</button>
+                </div>
+                <div id="inagent-end-screen" class="inagent-screen">
+                  <div id="inagent-end-title" class="inagent-end-title"></div>
+                  <div id="inagent-end-moves" class="inagent-end-moves"></div>
+                  <button id="inagent-restart-btn" class="inagent-btn" type="button">[ ИГРАТЬ СНОВА ]</button>
+                </div>
+                <div id="inagent-transition-screen" class="inagent-screen">
+                  <div id="inagent-transition-text" class="inagent-transition-text"></div>
                 </div>
               </div>
-              <div id="inagent-end-screen" class="inagent-screen">
-                <div id="inagent-end-title" class="inagent-end-title"></div>
-                <div id="inagent-end-moves" class="inagent-end-moves"></div>
-                <button id="inagent-restart-btn" class="inagent-btn" type="button">[ ИГРАТЬ СНОВА ]</button>
+              <div class="inagent-hud">
+                <span id="inagent-hud-sector">СЕКТОР: 1/5</span>
+                <span id="inagent-hud-moves">ХОД: 0</span>
+                <span id="inagent-hud-plans"></span>
               </div>
-              <div id="inagent-transition-screen" class="inagent-screen">
-                <div id="inagent-transition-text" class="inagent-transition-text"></div>
-              </div>
+              <div id="inagent-msg" class="inagent-msg">...</div>
             </div>
-            <div class="inagent-hud">
-              <span id="inagent-hud-sector">СЕКТОР: 1/5</span>
-              <span id="inagent-hud-moves">ХОД: 0</span>
-              <span id="inagent-hud-plans"></span>
-            </div>
-            <div id="inagent-msg" class="inagent-msg">...</div>
           </div>
         </div>
       </div>

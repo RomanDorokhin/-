@@ -210,6 +210,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentTransScreen) R.inagentTransScreen.classList.toggle('active', mode === 'trans');
   }
 
+  function setInagentFieldMode(mode = null) {
+    if (R.phase3MainField) {
+      R.phase3MainField.classList.toggle('inagent-intro', mode === 'intro');
+      R.phase3MainField.classList.toggle('inagent-launching', mode === 'launching');
+      R.phase3MainField.classList.toggle('inagent-embedded', mode === 'embedded');
+    }
+    if (R.phase3Top) {
+      R.phase3Top.classList.toggle('inagent-intro', mode === 'intro');
+      R.phase3Top.classList.toggle('inagent-launching', mode === 'launching');
+      R.phase3Top.classList.toggle('inagent-embedded', mode === 'embedded');
+    }
+  }
+
   function closeInagent({ silent = false } = {}) {
     if (!S.inagent.open) return;
     S.inagent.open = false;
@@ -228,10 +241,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
     document.body.classList.remove('inagent-intro');
     document.body.classList.remove('inagent-embedded');
-    if (R.phase3Top) {
-      R.phase3Top.classList.remove('inagent-embedded');
-      R.phase3Top.classList.remove('inagent-intro');
-    }
+    setInagentFieldMode(null);
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-active');
     setInagentScreen('intro');
     if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
@@ -901,10 +911,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     R.inagentHost.setAttribute('aria-hidden', 'false');
     document.body.classList.remove('inagent-embedded');
     document.body.classList.add('inagent-intro');
-    if (R.phase3Top) {
-      R.phase3Top.classList.remove('inagent-embedded');
-      R.phase3Top.classList.add('inagent-intro');
-    }
+    setInagentFieldMode('intro');
     if (R.noiseGrid) {
       R.noiseGrid.classList.remove('inagent-active');
       R.noiseGrid.classList.remove('inagent-transform-out');
@@ -917,16 +924,15 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   function startInagentFromIntro() {
     if (!S.inagent.open || !R.inagentHost) return;
     R.inagentHost.classList.remove('inagent-intro-open');
+    setInagentScreen(null);
+    setInagentFieldMode('launching');
     if (R.noiseGrid) R.noiseGrid.classList.add('inagent-transform-out');
     R.inagentHost.classList.add('inagent-transform-in');
     setTimeout(() => {
       if (!S.inagent.open) return;
       document.body.classList.remove('inagent-intro');
       document.body.classList.add('inagent-embedded');
-      if (R.phase3Top) {
-        R.phase3Top.classList.remove('inagent-intro');
-        R.phase3Top.classList.add('inagent-embedded');
-      }
+      setInagentFieldMode('embedded');
       if (R.noiseGrid) {
         R.noiseGrid.classList.remove('inagent-transform-out');
         R.noiseGrid.classList.add('inagent-active');

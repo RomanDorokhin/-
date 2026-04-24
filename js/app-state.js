@@ -41,6 +41,7 @@ window.OMS = window.OMS || {};
     tutorialButton: document.getElementById('tut-btn'),
     wtfMsg: document.getElementById('wtf-msg'),
     phase3Top: document.getElementById('phase3-top'),
+    phase3MainField: document.getElementById('phase3-main-field'),
     secretCounter: document.getElementById('secret-counter'),
     backpackBtn: document.getElementById('backpack-btn'),
     backpackModal: document.getElementById('backpack-modal'),
