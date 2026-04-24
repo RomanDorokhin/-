@@ -1009,6 +1009,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
 
   function startInagentFromIntro() {
     if (!S.inagent.open || !R.inagentHost) return;
+    R.inagentHost.classList.add('inagent-start-armed');
     R.inagentHost.classList.remove('inagent-intro-open');
     setInagentScreen(null);
     setInagentFieldState({ mode: true, launching: true });
@@ -1019,6 +1020,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
       setInagentFieldState({ mode: true, playing: true });
       R.inagentHost.classList.remove('inagent-transform-in');
+      R.inagentHost.classList.remove('inagent-start-armed');
       initInagent(0);
       setInagentScreen(null);
       playInagentReveal();
