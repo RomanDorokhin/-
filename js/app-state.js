@@ -313,6 +313,9 @@ window.OMS = window.OMS || {};
       collectedPickups: new Set(),
       flamerTick: 0,
       transitionTimer: null,
+      revealActive: false,
+      revealStartedAt: 0,
+      revealDuration: 860,
     },
     secretSystems: {
       controlPower: 0,

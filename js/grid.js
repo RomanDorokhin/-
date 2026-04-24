@@ -36,6 +36,11 @@ window.OMS = window.OMS || {};
       const cell = document.createElement('div');
       cell.className = 'noise-cell';
       cell.dataset.loc = C.LOCATIONS[i % C.LOCATIONS.length];
+      const col = i % 10;
+      const row = Math.floor(i / 10);
+      cell.style.setProperty('--grid-col', String(col));
+      cell.style.setProperty('--grid-row', String(row));
+      cell.style.setProperty('--grid-wave', String(Math.abs(col - 4.5) + Math.abs(row - 4.5)));
 
       const inner = document.createElement('div');
       inner.className = 'cell-inner';

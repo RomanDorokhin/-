@@ -466,6 +466,12 @@ body.snake-mode .cell-label {
   filter: drop-shadow(0 0 42px rgba(200, 255, 0, 0.16));
 }
 
+#phase3-main-field.inagent-mode.inagent-launching #noise-grid {
+  opacity: 0.14;
+  transform: scale(1.015);
+  filter: blur(1.8px) brightness(1.05);
+}
+
 #phase3-main-field.inagent-mode.inagent-playing {
   min-height: 0;
 }
@@ -486,6 +492,35 @@ body.snake-mode .cell-label {
   position: relative;
   overflow: visible;
   perspective: 300px;
+}
+
+.noise-cell {
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 260ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+#phase3-main-field.inagent-mode.inagent-launching .noise-cell {
+  opacity: 0;
+  transform:
+    translate3d(
+      calc((var(--grid-col, 5) - 4.5) * 8px),
+      calc((var(--grid-row, 5) - 4.5) * 8px),
+      0
+    )
+    scale(0.68)
+    rotate(calc((var(--grid-col, 0) - var(--grid-row, 0)) * 2deg));
+  filter: blur(3px);
+  transition-delay: calc((var(--grid-wave, 0) * 16ms));
+}
+
+#phase3-main-field.inagent-mode.inagent-launching .noise-cell .cell-front,
+#phase3-main-field.inagent-mode.inagent-launching .noise-cell .cell-back {
+  border-color: rgba(160, 220, 255, 0.08);
+  background: rgba(14, 30, 48, 0.12);
 }
 
 .cell-inner {
@@ -1354,6 +1389,13 @@ body.snake-mode .cell-label {
   justify-content: center;
 }
 
+#phase3-main-field.inagent-mode.inagent-launching #inagent-inline {
+  background:
+    radial-gradient(circle at 50% 22%, rgba(120, 200, 255, 0.22), transparent 32%),
+    radial-gradient(circle at 50% 55%, rgba(200, 255, 0, 0.08), transparent 45%),
+    linear-gradient(180deg, rgba(4, 10, 18, 0.72), rgba(0, 0, 0, 0.82));
+}
+
 .inagent-inline-shell {
   width: 100%;
   max-width: 980px;
@@ -1483,6 +1525,13 @@ body.snake-mode .cell-label {
 
 #inagent-inline.inagent-transform-in {
   animation: inagentInlineBoot 430ms ease;
+}
+
+#phase3-main-field.inagent-mode.inagent-launching .inagent-hud,
+#phase3-main-field.inagent-mode.inagent-launching .inagent-msg,
+#phase3-main-field.inagent-mode.inagent-launching .inagent-topbar {
+  opacity: 0.38;
+  transform: translateY(4px);
 }
 
 body.inagent-mode #scanlines,

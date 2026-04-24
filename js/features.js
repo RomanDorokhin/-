@@ -371,6 +371,48 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
   }
 
+  function getInagentRevealProgress() {
+    if (!S.inagent.open) return 1;
+    if (!S.inagent.introRevealMs) return 1;
+    const elapsed = Date.now() - S.inagent.introStartedAt;
+    return Math.max(0, Math.min(1, elapsed / S.inagent.introRevealMs));
+  }
+
+  function getInagentSpawnFactor(kind, row, col) {
+    const progress = getInagentRevealProgress();
+    if (progress >= 1) return 1;
+    const kindDelay = {
+      player: 0.5,
+      guard: 0.58,
+      pickup: 0.62,
+      plans: 0.65,
+      exit: 0.7,
+      switch: 0.52,
+      flame: 0.55,
+      mine: 0.6,
+    }[kind] || 0.58;
+    const radialDelay = ((row + col) / (INAGENT_ROWS + INAGENT_COLS)) * 0.22;
+    const local = (progress - kindDelay - radialDelay) / 0.22;
+    return Math.max(0, Math.min(1, local));
+  }
+
+  function drawInagentPulseNode(ctx, x, y, radius, fillStyle, label, labelColor = '#000', scale = 1) {
+    const safeScale = Math.max(0, scale);
+    if (safeScale <= 0) return;
+    const pulse = 0.84 + (1 - safeScale) * 0.18;
+    ctx.save();
+    ctx.translate(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2);
+    ctx.scale(safeScale * pulse, safeScale * pulse);
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = labelColor;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText(label, 0, 1);
+    ctx.restore();
+  }
+
   function drawInagent() {
     if (!R.inagentCanvas) return;
     const ctx = R.inagentCanvas.getContext('2d');
@@ -381,6 +423,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const activeFlames = inagentFlameCellsForTick();
     const secretPulse = 0.5 + 0.5 * Math.sin(Date.now() / 900);
     const switchPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420);
+    const revealProgress = getInagentRevealProgress();
+    const revealFrontier = Math.floor(INAGENT_COLS * revealProgress);
     for (let r = 0; r < INAGENT_ROWS; r++) {
       for (let c = 0; c < INAGENT_COLS; c++) {
         const x = c * INAGENT_CELL;
@@ -389,13 +433,22 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         const doorOpen = S.inagent.openDoors.some((door) => door.r === r && door.c === c);
         const switchNode = inagentSwitchAt(r, c);
         const isWallCell = !row || row[c] === '#';
+        const cellDelay = ((c / INAGENT_COLS) * 0.58) + ((r / INAGENT_ROWS) * 0.14);
+        const cellProgress = Math.max(0, Math.min(1, (revealProgress - cellDelay) / 0.25));
+        if (revealProgress < 1 && c > revealFrontier + 1 && cellProgress <= 0) {
+          ctx.fillStyle = '#050505';
+          ctx.strokeStyle = 'rgba(200,255,0,0.03)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
+          continue;
+        }
         if ((isWallCell && !doorOpen) || inagentIsSecret(r, c)) {
-          ctx.fillStyle = '#0d1a05';
+          ctx.fillStyle = `rgba(13,26,5,${0.12 + cellProgress * 0.88})`;
           ctx.fillRect(x, y, INAGENT_CELL, INAGENT_CELL);
-          ctx.strokeStyle = '#c8ff0018';
+          ctx.strokeStyle = `rgba(200,255,0,${0.03 + cellProgress * 0.09})`;
           ctx.lineWidth = 1;
           ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
-          ctx.strokeStyle = '#c8ff000c';
+          ctx.strokeStyle = `rgba(200,255,0,${0.01 + cellProgress * 0.04})`;
           ctx.lineWidth = 0.5;
           ctx.beginPath();
           ctx.moveTo(x, y);
@@ -404,31 +457,32 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           ctx.lineTo(x, y + INAGENT_CELL);
           ctx.stroke();
           if (inagentIsSecret(r, c)) {
-            ctx.fillStyle = `rgba(200,255,0,${0.016 + secretPulse * 0.03})`;
+            ctx.fillStyle = `rgba(200,255,0,${(0.016 + secretPulse * 0.03) * cellProgress})`;
             ctx.fillRect(x + 1, y + 1, INAGENT_CELL - 2, INAGENT_CELL - 2);
-            ctx.strokeStyle = `rgba(200,255,0,${0.03 + secretPulse * 0.06})`;
+            ctx.strokeStyle = `rgba(200,255,0,${(0.03 + secretPulse * 0.06) * cellProgress})`;
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 7.5, y + 7.5, INAGENT_CELL - 15, INAGENT_CELL - 15);
           }
         } else {
-          ctx.fillStyle = '#080808';
+          ctx.fillStyle = `rgba(8,8,8,${0.15 + cellProgress * 0.85})`;
           ctx.fillRect(x, y, INAGENT_CELL, INAGENT_CELL);
-          ctx.strokeStyle = '#c8ff0008';
+          ctx.strokeStyle = `rgba(200,255,0,${0.008 + cellProgress * 0.03})`;
           ctx.lineWidth = 0.5;
           ctx.strokeRect(x + 0.5, y + 0.5, INAGENT_CELL - 1, INAGENT_CELL - 1);
           if (doorOpen) {
-            ctx.fillStyle = 'rgba(126,230,255,0.08)';
+            ctx.fillStyle = `rgba(126,230,255,${0.08 * cellProgress})`;
             ctx.fillRect(x + 1, y + 1, INAGENT_CELL - 2, INAGENT_CELL - 2);
-            ctx.strokeStyle = 'rgba(126,230,255,0.3)';
+            ctx.strokeStyle = `rgba(126,230,255,${0.3 * cellProgress})`;
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 8.5, y + 8.5, INAGENT_CELL - 17, INAGENT_CELL - 17);
           }
         }
 
-        if (switchNode) {
-          ctx.fillStyle = `rgba(126,230,255,${0.16 + switchPulse * 0.18})`;
+        const switchFactor = getInagentSpawnFactor('switch', r, c);
+        if (switchNode && switchFactor > 0) {
+          ctx.fillStyle = `rgba(126,230,255,${(0.16 + switchPulse * 0.18) * switchFactor})`;
           ctx.fillRect(x + 10, y + 10, INAGENT_CELL - 20, INAGENT_CELL - 20);
-          ctx.strokeStyle = `rgba(126,230,255,${0.34 + switchPulse * 0.26})`;
+          ctx.strokeStyle = `rgba(126,230,255,${(0.34 + switchPulse * 0.26) * switchFactor})`;
           ctx.lineWidth = 1.2;
           ctx.strokeRect(x + 10.5, y + 10.5, INAGENT_CELL - 21, INAGENT_CELL - 21);
           ctx.fillStyle = '#7ee6ff';
@@ -436,10 +490,11 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           ctx.fillText('SW', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
         }
 
-        if (activeFlames.set.has(inagentCellKey(r, c))) {
-          ctx.fillStyle = 'rgba(255,80,10,0.22)';
+        const flameFactor = getInagentSpawnFactor('flame', r, c);
+        if (activeFlames.set.has(inagentCellKey(r, c)) && flameFactor > 0) {
+          ctx.fillStyle = `rgba(255,80,10,${0.22 * flameFactor})`;
           ctx.fillRect(x + 1, y + 1, INAGENT_CELL - 2, INAGENT_CELL - 2);
-          ctx.strokeStyle = 'rgba(255,120,30,0.7)';
+          ctx.strokeStyle = `rgba(255,120,30,${0.7 * flameFactor})`;
           ctx.lineWidth = 1.2;
           ctx.strokeRect(x + 5.5, y + 5.5, INAGENT_CELL - 11, INAGENT_CELL - 11);
           ctx.fillStyle = '#ffb347';
@@ -455,17 +510,22 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     ctx.textBaseline = 'middle';
 
     if (lvl.plans && !S.inagent.hasPlans) {
-      const x = lvl.plans.c * INAGENT_CELL;
-      const y = lvl.plans.r * INAGENT_CELL;
-      ctx.fillStyle = '#ffcc00';
-      ctx.beginPath();
-      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+      const plansFactor = getInagentSpawnFactor('plans', lvl.plans.r, lvl.plans.c);
+      if (plansFactor > 0) {
+        const x = lvl.plans.c * INAGENT_CELL;
+        const y = lvl.plans.r * INAGENT_CELL;
+        ctx.fillStyle = `rgba(255,204,0,${plansFactor})`;
+        ctx.beginPath();
+        ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * (0.14 + plansFactor * 0.14), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(0,0,0,${plansFactor})`;
+        ctx.fillText('?', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+      }
     }
 
     inagentPickups().filter(inagentPickupAvailable).forEach((pickup) => {
+      const pickupFactor = getInagentSpawnFactor('pickup', pickup.r, pickup.c);
+      if (pickupFactor <= 0) return;
       const x = pickup.c * INAGENT_CELL;
       const y = pickup.r * INAGENT_CELL;
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 380);
@@ -476,39 +536,46 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         medkit: { glow: '#73ff9f', icon: 'HP', bg: '#031407' },
       };
       const style = styleByKind[pickup.kind] || styleByKind.phase;
-      ctx.fillStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${0.18 + pulse * 0.2})`;
+      ctx.fillStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${(0.18 + pulse * 0.2) * pickupFactor})`;
       ctx.beginPath();
-      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.24, 0, Math.PI * 2);
+      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * (0.1 + pickupFactor * 0.14), 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${0.25 + pulse * 0.35})`;
+      ctx.strokeStyle = `rgba(${pickup.kind === 'mine' ? '255,138,101' : pickup.kind === 'emp' ? '159,168,255' : pickup.kind === 'medkit' ? '115,255,159' : '126,230,255'},${(0.25 + pulse * 0.35) * pickupFactor})`;
       ctx.lineWidth = 1.2;
       ctx.strokeRect(x + 9.5, y + 9.5, INAGENT_CELL - 19, INAGENT_CELL - 19);
-      ctx.fillStyle = style.bg;
+      ctx.fillStyle = `rgba(${style.bg === '#02141a' ? '2,20,26' : style.bg === '#1e0a02' ? '30,10,2' : style.bg === '#090b1a' ? '9,11,26' : '3,20,7'},${pickupFactor})`;
       ctx.font = 'bold 8px monospace';
       ctx.fillText(style.icon, x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
     });
 
     if (lvl.exit) {
-      const ex = lvl.exit.c * INAGENT_CELL;
-      const ey = lvl.exit.r * INAGENT_CELL;
-      const exitColor = S.inagent.hasPlans ? '#c8ff00' : '#c8ff0033';
-      ctx.strokeStyle = exitColor;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(ex + 6, ey + 6, INAGENT_CELL - 12, INAGENT_CELL - 12);
-      ctx.fillStyle = exitColor;
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('EXIT', ex + INAGENT_CELL / 2, ey + INAGENT_CELL / 2 + 1);
+      const exitFactor = getInagentSpawnFactor('exit', lvl.exit.r, lvl.exit.c);
+      if (exitFactor > 0) {
+        const ex = lvl.exit.c * INAGENT_CELL;
+        const ey = lvl.exit.r * INAGENT_CELL;
+        const exitColor = S.inagent.hasPlans ? '#c8ff00' : '#c8ff0033';
+        ctx.globalAlpha = exitFactor;
+        ctx.strokeStyle = exitColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(ex + 6, ey + 6, INAGENT_CELL - 12, INAGENT_CELL - 12);
+        ctx.fillStyle = exitColor;
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('EXIT', ex + INAGENT_CELL / 2, ey + INAGENT_CELL / 2 + 1);
+        ctx.globalAlpha = 1;
+      }
     }
 
     S.inagent.mines.forEach((mine) => {
+      const mineFactor = getInagentSpawnFactor('mine', mine.r, mine.c);
+      if (mineFactor <= 0) return;
       const mx = mine.c * INAGENT_CELL;
       const my = mine.r * INAGENT_CELL;
-      ctx.fillStyle = 'rgba(255,70,40,0.22)';
+      ctx.fillStyle = `rgba(255,70,40,${0.22 * mineFactor})`;
       ctx.fillRect(mx + 11, my + 11, INAGENT_CELL - 22, INAGENT_CELL - 22);
-      ctx.strokeStyle = 'rgba(255,120,70,0.75)';
+      ctx.strokeStyle = `rgba(255,120,70,${0.75 * mineFactor})`;
       ctx.lineWidth = 1.1;
       ctx.strokeRect(mx + 11.5, my + 11.5, INAGENT_CELL - 23, INAGENT_CELL - 23);
-      ctx.fillStyle = '#ff9a7a';
+      ctx.fillStyle = `rgba(255,154,122,${mineFactor})`;
       ctx.font = 'bold 9px monospace';
       ctx.fillText('✹', mx + INAGENT_CELL / 2, my + INAGENT_CELL / 2 + 1);
     });
@@ -516,24 +583,32 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.guards.forEach((guard) => {
       const x = guard.c * INAGENT_CELL;
       const y = guard.r * INAGENT_CELL;
-      ctx.fillStyle = S.inagent.guardsFrozen > 0 ? '#7aa0ff' : '#ff3030';
-      ctx.beginPath();
-      ctx.arc(x + INAGENT_CELL / 2, y + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 13px monospace';
-      ctx.fillText('G', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
+      const guardFactor = getInagentSpawnFactor('guard', guard.r, guard.c);
+      drawInagentPulseNode(
+        ctx,
+        x,
+        y,
+        INAGENT_CELL * 0.3,
+        S.inagent.guardsFrozen > 0 ? '#7aa0ff' : '#ff3030',
+        'G',
+        '#000',
+        guardFactor,
+      );
     });
 
     const px = S.inagent.player.c * INAGENT_CELL;
     const py = S.inagent.player.r * INAGENT_CELL;
-    ctx.fillStyle = S.inagent.phaseActive ? '#7ee6ff' : '#c8ff00';
-    ctx.beginPath();
-    ctx.arc(px + INAGENT_CELL / 2, py + INAGENT_CELL / 2, INAGENT_CELL * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 13px monospace';
-    ctx.fillText('P', px + INAGENT_CELL / 2, py + INAGENT_CELL / 2 + 1);
+    const playerFactor = getInagentSpawnFactor('player', S.inagent.player.r, S.inagent.player.c);
+    drawInagentPulseNode(
+      ctx,
+      px,
+      py,
+      INAGENT_CELL * 0.3,
+      S.inagent.phaseActive ? '#7ee6ff' : '#c8ff00',
+      'P',
+      '#000',
+      playerFactor,
+    );
   }
 
   function flashInagent(msg) {
@@ -772,9 +847,28 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       S.inagent.maxLives = 3;
       S.inagent.lives = S.inagent.maxLives;
     }
+    S.inagent.introStartedAt = 0;
+    S.inagent.introRevealMs = 0;
     setInagentScreen(null);
     drawInagent();
     updateInagentHud();
+  }
+
+  function playInagentReveal() {
+    S.inagent.introStartedAt = Date.now();
+    S.inagent.introRevealMs = 920;
+    const tick = () => {
+      if (!S.inagent.open || !S.inagent.introRevealMs) return;
+      drawInagent();
+      if (getInagentRevealProgress() >= 1) {
+        S.inagent.introStartedAt = 0;
+        S.inagent.introRevealMs = 0;
+        drawInagent();
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   function handleInagentLifeLoss() {
@@ -926,6 +1020,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       R.inagentHost.classList.remove('inagent-transform-in');
       initInagent(0);
       setInagentScreen(null);
+      playInagentReveal();
     }, 380);
   }
 
