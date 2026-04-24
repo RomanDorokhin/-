@@ -725,9 +725,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     }
     S.inagent.mineCharges -= 1;
     S.inagent.mines.push({ r: S.inagent.player.r, c: S.inagent.player.c });
-    flashInagent('МИНА УСТАНОВЛЕНА — ОТОЙДИ НА ШАГ');
-    drawInagent();
-    updateInagentHud();
+    flashInagent('МИНА УСТАНОВЛЕНА — ЖДИ ДЕТОНАЦИИ');
+    stepInagent(0, 0, { isAction: true });
     return true;
   }
 
