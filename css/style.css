@@ -436,6 +436,14 @@ body.snake-mode .cell-label {
   width: min(600px, 80vw);
 }
 
+body.inagent-embedded #noise-grid {
+  display: none;
+}
+
+body.inagent-embedded #phase3-bottom {
+  display: none;
+}
+
 .noise-cell {
   aspect-ratio: 1;
   background: rgba(0,255,65,0.05);
@@ -839,6 +847,44 @@ body.snake-mode .cell-label {
 
 #inagent-overlay.open {
   display: flex;
+}
+
+#inagent-overlay.embedded {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: none;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  width: min(600px, 80vw);
+}
+
+#inagent-overlay.embedded.open {
+  display: block;
+}
+
+#inagent-overlay.embedded .inagent-shell {
+  width: 100%;
+  max-width: none;
+}
+
+#inagent-overlay.embedded .inagent-topbar {
+  max-width: none;
+}
+
+#inagent-overlay.embedded .inagent-game-wrap {
+  max-width: none;
+}
+
+#inagent-overlay.embedded #inagent-canvas {
+  width: 100%;
+}
+
+body.inagent-embedded .section-title.inagent-title-bar {
+  color: rgba(200, 255, 0, 0.75);
 }
 
 .inagent-topbar {

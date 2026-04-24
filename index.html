@@ -50,44 +50,6 @@
   </div>
 </div>
 
-<div id="inagent-overlay" aria-hidden="true">
-  <div class="inagent-shell">
-    <div class="inagent-topbar">
-      <div>
-        <div class="inagent-title">ИНАГЕНТ</div>
-        <div class="inagent-subtitle">CASTLE.EXE // SUPERHOT EDITION</div>
-      </div>
-      <button id="inagent-close" type="button">✕</button>
-    </div>
-    <div class="inagent-stage">
-      <div class="inagent-game-wrap">
-        <canvas id="inagent-canvas" width="480" height="400"></canvas>
-        <div id="inagent-start-screen" class="inagent-screen">
-          <p class="inagent-screen-title">ИНАГЕНТ</p>
-          <p class="inagent-screen-copy">ВРЕМЯ ДВИЖЕТСЯ ТОЛЬКО КОГДА ДВИЖЕШЬСЯ ТЫ</p>
-          <p class="inagent-screen-copy">WASD / СТРЕЛКИ — движение &nbsp; Q — фаза &nbsp; M — мина &nbsp; E — EMP &nbsp; R — рестарт</p>
-          <p class="inagent-screen-hint">КАЖДАЯ КАРТА СКРЫВАЕТ ТАЙНУ</p>
-          <button id="inagent-start-btn" class="inagent-btn" type="button">[ НАЧАТЬ ]</button>
-        </div>
-        <div id="inagent-end-screen" class="inagent-screen">
-          <div id="inagent-end-title" class="inagent-end-title"></div>
-          <div id="inagent-end-moves" class="inagent-end-moves"></div>
-          <button id="inagent-restart-btn" class="inagent-btn" type="button">[ ИГРАТЬ СНОВА ]</button>
-        </div>
-        <div id="inagent-transition-screen" class="inagent-screen">
-          <div id="inagent-transition-text" class="inagent-transition-text"></div>
-        </div>
-      </div>
-      <div class="inagent-hud">
-        <span id="inagent-hud-sector">СЕКТОР: 1/5</span>
-        <span id="inagent-hud-moves">ХОД: 0</span>
-        <span id="inagent-hud-plans"></span>
-      </div>
-      <div id="inagent-msg" class="inagent-msg">...</div>
-    </div>
-  </div>
-</div>
-
 <div id="session-time">
   SESSION<br>00:00:00
 </div>
@@ -141,6 +103,43 @@
     <div id="phase3-top">
       <div class="section-title">// MATRIX OF NOISE — SELECT A CHANNEL //</div>
       <div id="noise-grid"></div>
+      <div id="inagent-inline" aria-hidden="true">
+        <div class="inagent-shell inagent-inline-shell">
+          <div class="inagent-topbar">
+            <div>
+              <div class="inagent-title">ИНАГЕНТ</div>
+              <div class="inagent-subtitle">CASTLE.EXE // SUPERHOT EDITION</div>
+            </div>
+            <button id="inagent-close" type="button">✕</button>
+          </div>
+          <div class="inagent-stage">
+            <div class="inagent-game-wrap">
+              <canvas id="inagent-canvas" width="480" height="400"></canvas>
+              <div id="inagent-start-screen" class="inagent-screen">
+                <p class="inagent-screen-title">СЕКРЕТНЫЙ РЕЖИМ</p>
+                <p class="inagent-screen-copy">ТЫ ОТКРЫЛ ИНАГЕНТ</p>
+                <p class="inagent-screen-copy">WASD / СТРЕЛКИ — движение &nbsp; Q — фаза &nbsp; M — мина &nbsp; E — EMP &nbsp; R — рестарт</p>
+                <p class="inagent-screen-hint">ИГРА ЗАПУСКАЕТСЯ В ОСНОВНОМ КВАДРАТЕ</p>
+                <button id="inagent-start-btn" class="inagent-btn" type="button">[ СТАРТ ]</button>
+              </div>
+              <div id="inagent-end-screen" class="inagent-screen">
+                <div id="inagent-end-title" class="inagent-end-title"></div>
+                <div id="inagent-end-moves" class="inagent-end-moves"></div>
+                <button id="inagent-restart-btn" class="inagent-btn" type="button">[ ИГРАТЬ СНОВА ]</button>
+              </div>
+              <div id="inagent-transition-screen" class="inagent-screen">
+                <div id="inagent-transition-text" class="inagent-transition-text"></div>
+              </div>
+            </div>
+            <div class="inagent-hud">
+              <span id="inagent-hud-sector">СЕКТОР: 1/5</span>
+              <span id="inagent-hud-moves">ХОД: 0</span>
+              <span id="inagent-hud-plans"></span>
+            </div>
+            <div id="inagent-msg" class="inagent-msg">...</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="phase3-bottom">

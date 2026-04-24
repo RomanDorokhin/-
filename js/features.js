@@ -208,6 +208,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentStartScreen) R.inagentStartScreen.classList.toggle('active', mode === 'intro');
     if (R.inagentEndScreen) R.inagentEndScreen.classList.toggle('active', mode === 'end');
     if (R.inagentTransScreen) R.inagentTransScreen.classList.toggle('active', mode === 'trans');
+    if (R.inagentHost) R.inagentHost.classList.toggle('active', !!mode);
+    if (R.noiseGrid) R.noiseGrid.classList.toggle('inagent-active', !!mode);
   }
 
   function closeInagent({ silent = false } = {}) {
@@ -219,9 +221,11 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       S.inagent.transitionTimer = null;
     }
     S.inagent.phaseActive = false;
-    const overlay = R.inagentOverlay;
-    if (overlay) overlay.classList.remove('open');
-    if (overlay) overlay.setAttribute('aria-hidden', 'true');
+    if (R.inagentHost) {
+      R.inagentHost.classList.remove('active');
+      R.inagentHost.setAttribute('aria-hidden', 'true');
+    }
+    if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-active');
     setInagentScreen('intro');
     if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
   }

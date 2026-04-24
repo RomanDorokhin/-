@@ -40,6 +40,7 @@ window.OMS = window.OMS || {};
     tutorialText: document.getElementById('tut-text'),
     tutorialButton: document.getElementById('tut-btn'),
     wtfMsg: document.getElementById('wtf-msg'),
+    phase3Top: document.getElementById('phase3-top'),
     secretCounter: document.getElementById('secret-counter'),
     backpackBtn: document.getElementById('backpack-btn'),
     backpackModal: document.getElementById('backpack-modal'),
