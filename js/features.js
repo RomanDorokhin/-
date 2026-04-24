@@ -885,12 +885,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
   }
 
   function openInagentMode() {
-    if (S.currentPhase < 1 || S.lifetimeLimitReached || !R.inagentOverlay) return;
+    if (S.currentPhase < 1 || S.lifetimeLimitReached || !R.inagentHost) return;
     S.inagent.open = true;
-    R.inagentOverlay.classList.add('open');
-    R.inagentOverlay.setAttribute('aria-hidden', 'false');
+    R.inagentHost.classList.add('active');
+    R.inagentHost.setAttribute('aria-hidden', 'false');
+    if (R.noiseGrid) R.noiseGrid.classList.add('inagent-active');
     initInagent(0);
-    setSnakeStatus('ИНАГЕНТ // ПРОЙДИ ВСЕ 5 СЕКТОРОВ', 1800);
+    setInagentScreen('intro');
+    setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ // ИНАГЕНТ', 1800);
   }
 
   function toggleInagentMode() {

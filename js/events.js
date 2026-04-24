@@ -147,13 +147,16 @@ window.OMS = window.OMS || {};
         }
       }
 
-      if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
+      if ((e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') && !S.inagent.open) {
         OMS.features.toggleEmergencyExit();
         S.ebtState = S.eeActive ? 'e' : '';
         return;
       }
       if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
-        if (S.inagent.open) return;
+        if (S.inagent.open) {
+          e.preventDefault();
+          return;
+        }
         if (S.ebtState === 'e') {
           S.ebtState = 'b';
           if (OMS.secrets) OMS.secrets.unlockSecret('ebat_b', { source: 'ebat_sequence' });

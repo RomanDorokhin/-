@@ -47,7 +47,7 @@ window.OMS = window.OMS || {};
     backpackGrid: document.getElementById('backpack-grid'),
     backpackProgress: document.getElementById('backpack-progress'),
     backpackClose: document.getElementById('backpack-close'),
-    inagentOverlay: document.getElementById('inagent-overlay'),
+    inagentHost: document.getElementById('inagent-inline'),
     inagentCanvas: document.getElementById('inagent-canvas'),
     inagentStartScreen: document.getElementById('inagent-start-screen'),
     inagentStartBtn: document.getElementById('inagent-start-btn'),

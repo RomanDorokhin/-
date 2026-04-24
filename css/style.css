@@ -1305,6 +1305,31 @@ body.inagent-embedded .section-title.inagent-title-bar {
   gap: 12px;
 }
 
+#phase3-top.inagent-embedded .section-title,
+#phase3-top.inagent-embedded + #phase3-bottom {
+  display: none;
+}
+
+#noise-grid.inagent-active {
+  display: none;
+}
+
+#inagent-inline {
+  width: min(600px, 80vw);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+#inagent-inline.active {
+  display: flex;
+}
+
+.inagent-inline-shell {
+  width: 100%;
+}
+
 .typed::after {
   content: '█';
   animation: blink 0.7s step-end infinite;
