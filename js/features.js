@@ -210,17 +210,14 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (R.inagentTransScreen) R.inagentTransScreen.classList.toggle('active', mode === 'trans');
   }
 
-  function setInagentFieldMode(mode = null) {
-    if (R.phase3MainField) {
-      R.phase3MainField.classList.toggle('inagent-intro', mode === 'intro');
-      R.phase3MainField.classList.toggle('inagent-launching', mode === 'launching');
-      R.phase3MainField.classList.toggle('inagent-embedded', mode === 'embedded');
-    }
-    if (R.phase3Top) {
-      R.phase3Top.classList.toggle('inagent-intro', mode === 'intro');
-      R.phase3Top.classList.toggle('inagent-launching', mode === 'launching');
-      R.phase3Top.classList.toggle('inagent-embedded', mode === 'embedded');
-    }
+  function setInagentFieldState({ mode = false, launching = false, playing = false } = {}) {
+    const targets = [R.phase3MainField, R.phase3Top];
+    targets.forEach((target) => {
+      if (!target) return;
+      target.classList.toggle('inagent-mode', mode);
+      target.classList.toggle('inagent-launching', mode && launching);
+      target.classList.toggle('inagent-playing', mode && playing);
+    });
   }
 
   function closeInagent({ silent = false } = {}) {
@@ -239,10 +236,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       R.inagentHost.setAttribute('aria-hidden', 'true');
     }
     if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
-    document.body.classList.remove('inagent-intro');
-    document.body.classList.remove('inagent-embedded');
-    setInagentFieldMode(null);
-    if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-active');
+    document.body.classList.remove('inagent-mode');
+    setInagentFieldState();
     setInagentScreen('intro');
     if (!silent) setSnakeStatus('ИНАГЕНТ ЗАКРЫТ', 1200);
   }
@@ -909,13 +904,9 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     R.inagentHost.classList.remove('inagent-transform-in');
     R.inagentHost.classList.add('inagent-intro-open');
     R.inagentHost.setAttribute('aria-hidden', 'false');
-    document.body.classList.remove('inagent-embedded');
-    document.body.classList.add('inagent-intro');
-    setInagentFieldMode('intro');
-    if (R.noiseGrid) {
-      R.noiseGrid.classList.remove('inagent-active');
-      R.noiseGrid.classList.remove('inagent-transform-out');
-    }
+    document.body.classList.add('inagent-mode');
+    setInagentFieldState({ mode: true });
+    if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
     initInagent(0);
     setInagentScreen('intro');
     setSnakeStatus('СЕКРЕТНЫЙ РЕЖИМ // ИНАГЕНТ', 1800);
@@ -925,18 +916,13 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     if (!S.inagent.open || !R.inagentHost) return;
     R.inagentHost.classList.remove('inagent-intro-open');
     setInagentScreen(null);
-    setInagentFieldMode('launching');
+    setInagentFieldState({ mode: true, launching: true });
     if (R.noiseGrid) R.noiseGrid.classList.add('inagent-transform-out');
     R.inagentHost.classList.add('inagent-transform-in');
     setTimeout(() => {
       if (!S.inagent.open) return;
-      document.body.classList.remove('inagent-intro');
-      document.body.classList.add('inagent-embedded');
-      setInagentFieldMode('embedded');
-      if (R.noiseGrid) {
-        R.noiseGrid.classList.remove('inagent-transform-out');
-        R.noiseGrid.classList.add('inagent-active');
-      }
+      if (R.noiseGrid) R.noiseGrid.classList.remove('inagent-transform-out');
+      setInagentFieldState({ mode: true, playing: true });
       R.inagentHost.classList.remove('inagent-transform-in');
       initInagent(0);
       setInagentScreen(null);

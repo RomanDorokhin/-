@@ -452,25 +452,25 @@ body.snake-mode .cell-label {
   isolation: isolate;
 }
 
-#phase3-main-field.inagent-intro {
+#phase3-main-field.inagent-mode {
   filter: drop-shadow(0 0 30px rgba(160, 220, 255, 0.08));
 }
 
-#phase3-main-field.inagent-intro #noise-grid {
+#phase3-main-field.inagent-mode #noise-grid {
   opacity: 0.22;
   transform: scale(0.985);
   filter: blur(0.6px) saturate(0.75);
 }
 
-#phase3-main-field.inagent-launching {
+#phase3-main-field.inagent-mode.inagent-launching {
   filter: drop-shadow(0 0 42px rgba(200, 255, 0, 0.16));
 }
 
-#phase3-main-field.inagent-embedded {
+#phase3-main-field.inagent-mode.inagent-playing {
   min-height: 0;
 }
 
-#phase3-main-field.inagent-embedded #noise-grid {
+#phase3-main-field.inagent-mode.inagent-playing #noise-grid {
   visibility: hidden;
   opacity: 0;
   transform: scale(1.05);
@@ -1288,25 +1288,20 @@ body.snake-mode .cell-label {
   transition: opacity 260ms ease, transform 260ms ease, filter 260ms ease;
 }
 
-#phase3-top.inagent-intro .section-title {
+#phase3-top.inagent-mode .section-title {
   opacity: 0.26;
 }
 
-#phase3-top.inagent-embedded .section-title {
+#phase3-top.inagent-mode.inagent-playing .section-title {
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
 }
 
-#phase3-top.inagent-launching + #phase3-bottom,
-#phase3-top.inagent-embedded + #phase3-bottom {
+#phase3-top.inagent-mode + #phase3-bottom {
   opacity: 0.04;
   transform: translateY(12px);
   filter: blur(3px);
-  pointer-events: none;
-}
-
-#noise-grid.inagent-active {
   pointer-events: none;
 }
 
@@ -1339,7 +1334,7 @@ body.snake-mode .cell-label {
   pointer-events: auto;
 }
 
-#inagent-inline.inagent-intro-open {
+#phase3-main-field.inagent-mode #inagent-inline {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1364,7 +1359,7 @@ body.snake-mode .cell-label {
   max-width: 980px;
 }
 
-#inagent-inline.inagent-intro-open .inagent-inline-shell {
+#phase3-main-field.inagent-mode #inagent-inline .inagent-inline-shell {
   width: min(100%, 920px);
 }
 
@@ -1392,10 +1387,15 @@ body.snake-mode .cell-label {
   max-width: 920px;
 }
 
-#phase3-main-field.inagent-embedded #inagent-inline {
+#phase3-main-field.inagent-mode.inagent-playing #inagent-inline {
   position: relative;
   inset: auto;
   height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 #inagent-inline #inagent-canvas {
@@ -1485,34 +1485,20 @@ body.snake-mode .cell-label {
   animation: inagentInlineBoot 430ms ease;
 }
 
-body.inagent-intro #scanlines,
-body.inagent-intro #noise,
-body.inagent-intro #coords,
-body.inagent-intro #countdown,
-body.inagent-intro #visitor-id,
-body.inagent-intro #waveform,
-body.inagent-intro #global-presence,
-body.inagent-intro #idle-msg,
-body.inagent-intro #session-time,
-body.inagent-intro #mute-btn,
-body.inagent-intro #vol-wrap,
-body.inagent-intro #visit-badge,
-body.inagent-intro #konami-hint,
-body.inagent-intro #secrets-hud,
-body.inagent-embedded #scanlines,
-body.inagent-embedded #noise,
-body.inagent-embedded #coords,
-body.inagent-embedded #countdown,
-body.inagent-embedded #visitor-id,
-body.inagent-embedded #waveform,
-body.inagent-embedded #global-presence,
-body.inagent-embedded #idle-msg,
-body.inagent-embedded #session-time,
-body.inagent-embedded #mute-btn,
-body.inagent-embedded #vol-wrap,
-body.inagent-embedded #visit-badge,
-body.inagent-embedded #konami-hint,
-body.inagent-embedded #secrets-hud {
+body.inagent-mode #scanlines,
+body.inagent-mode #noise,
+body.inagent-mode #coords,
+body.inagent-mode #countdown,
+body.inagent-mode #visitor-id,
+body.inagent-mode #waveform,
+body.inagent-mode #global-presence,
+body.inagent-mode #idle-msg,
+body.inagent-mode #session-time,
+body.inagent-mode #mute-btn,
+body.inagent-mode #vol-wrap,
+body.inagent-mode #visit-badge,
+body.inagent-mode #konami-hint,
+body.inagent-mode #secrets-hud {
   opacity: 0.08;
   pointer-events: none;
 }
