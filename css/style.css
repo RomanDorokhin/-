@@ -437,14 +437,14 @@ body.snake-mode .cell-label {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   gap: 3px;
-  width: min(600px, 80vw);
+  width: 100%;
   margin: 0 auto;
   transition: opacity 280ms ease, transform 280ms ease, filter 280ms ease;
 }
 
 #phase3-main-field {
   position: relative;
-  width: min(88vw, 980px);
+  width: min(600px, 80vw);
   min-height: min(70vh, 640px);
   display: flex;
   align-items: center;
@@ -926,7 +926,7 @@ body.snake-mode .cell-label {
 }
 
 .inagent-shell {
-  width: min(560px, 96vw);
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -965,7 +965,7 @@ body.snake-mode .cell-label {
 .inagent-game-wrap {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
 }
 
 #inagent-canvas {
@@ -1406,11 +1406,12 @@ body.snake-mode .cell-label {
 }
 
 #phase3-main-field.inagent-mode #inagent-inline .inagent-inline-shell {
-  width: min(100%, 920px);
+  width: 100%;
+  max-width: none;
 }
 
 #inagent-inline .inagent-topbar {
-  max-width: 920px;
+  max-width: 100%;
   gap: 10px;
 }
 
@@ -1430,7 +1431,7 @@ body.snake-mode .cell-label {
 }
 
 #inagent-inline .inagent-game-wrap {
-  max-width: 920px;
+  max-width: 100%;
 }
 
 #phase3-main-field.inagent-mode.inagent-playing #inagent-inline {
@@ -1445,7 +1446,7 @@ body.snake-mode .cell-label {
 }
 
 #phase3-main-field.inagent-mode.inagent-playing .inagent-shell {
-  width: min(600px, 80vw);
+  width: 100%;
   gap: 8px;
 }
 
@@ -1455,6 +1456,7 @@ body.snake-mode .cell-label {
 
 #phase3-main-field.inagent-mode.inagent-playing .inagent-game-wrap,
 #phase3-main-field.inagent-mode.inagent-playing .inagent-hud {
+  width: 100%;
   max-width: 100%;
 }
 
