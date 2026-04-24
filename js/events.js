@@ -153,10 +153,6 @@ window.OMS = window.OMS || {};
         return;
       }
       if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
-        if (S.inagent.open) {
-          e.preventDefault();
-          return;
-        }
         if (S.ebtState === 'e') {
           S.ebtState = 'b';
           if (OMS.secrets) OMS.secrets.unlockSecret('ebat_b', { source: 'ebat_sequence' });
