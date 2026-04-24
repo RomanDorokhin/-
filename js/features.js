@@ -94,10 +94,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 7, c: 2, kind: 'phase' },
         { r: 5, c: 3, kind: 'mine' },
       ],
-      flamers: [
-        { r: 1, c: 11, dir: 'left', len: 4, period: 5, on: 2, phase: 2 },
-        { r: 7, c: 0, dir: 'right', len: 4, period: 6, on: 2, phase: 0 },
-      ],
+      flamers: [],
       plans: null,
       exit: null,
     },
@@ -121,10 +118,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 5, c: 2, kind: 'mine' },
         { r: 7, c: 6, kind: 'emp' },
       ],
-      flamers: [
-        { r: 1, c: 11, dir: 'left', len: 6, period: 5, on: 2, phase: 1 },
-        { r: 7, c: 0, dir: 'right', len: 5, period: 4, on: 1, phase: 0 },
-      ],
+      flamers: [],
       plans: null,
       exit: null,
     },
@@ -149,10 +143,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 5, c: 1, kind: 'medkit' },
         { r: 1, c: 8, kind: 'emp' },
       ],
-      flamers: [
-        { r: 7, c: 11, dir: 'left', len: 3, period: 4, on: 2, phase: 1 },
-        { r: 5, c: 11, dir: 'left', len: 4, period: 5, on: 2, phase: 0 },
-      ],
+      flamers: [],
       plans: null,
       exit: null,
     },
@@ -177,10 +168,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 1, c: 9, kind: 'emp' },
         { r: 6, c: 3, kind: 'medkit' },
       ],
-      flamers: [
-        { r: 1, c: 11, dir: 'left', len: 5, period: 4, on: 2, phase: 0 },
-        { r: 8, c: 0, dir: 'right', len: 5, period: 5, on: 2, phase: 2 },
-      ],
+      flamers: [],
       plans: null,
       exit: null,
     },
@@ -206,11 +194,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         { r: 1, c: 2, kind: 'medkit' },
         { r: 3, c: 10, kind: 'phase' },
       ],
-      flamers: [
-        { r: 1, c: 11, dir: 'left', len: 6, period: 4, on: 2, phase: 1 },
-        { r: 5, c: 0, dir: 'right', len: 4, period: 5, on: 2, phase: 2 },
-        { r: 7, c: 0, dir: 'right', len: 6, period: 5, on: 2, phase: 0 },
-      ],
+      flamers: [],
       plans: { r: 3, c: 9 },
       exit: { r: 7, c: 10 },
     },
@@ -379,7 +363,6 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     ctx.fillRect(0, 0, R.inagentCanvas.width, R.inagentCanvas.height);
     const lvl = inagentLevel();
     const activeFlames = inagentFlameCellsForTick();
-    const flamerByCell = new Map((lvl.flamers || []).map((flamer) => [inagentCellKey(flamer.r, flamer.c), flamer]));
     const secretPulse = 0.5 + 0.5 * Math.sin(Date.now() / 900);
     const switchPulse = 0.5 + 0.5 * Math.sin(Date.now() / 420);
     for (let r = 0; r < INAGENT_ROWS; r++) {
@@ -448,18 +431,6 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
           ctx.fillText('F', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
         }
 
-        const flamer = flamerByCell.get(inagentCellKey(r, c));
-        if (flamer) {
-          ctx.fillStyle = '#8b1f00';
-          ctx.fillRect(x + 8, y + 8, INAGENT_CELL - 16, INAGENT_CELL - 16);
-          ctx.strokeStyle = '#ff6a00';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 8.5, y + 8.5, INAGENT_CELL - 17, INAGENT_CELL - 17);
-          const arrows = { left: '←', right: '→', up: '↑', down: '↓' };
-          ctx.fillStyle = '#ffd9b3';
-          ctx.font = 'bold 9px monospace';
-          ctx.fillText(arrows[flamer.dir] || 'F', x + INAGENT_CELL / 2, y + INAGENT_CELL / 2 + 1);
-        }
       }
     }
 
@@ -723,21 +694,8 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return detonations;
   }
 
-  function resolveInagentFlames({ phaseStep = false } = {}) {
-    const activeFlames = inagentFlameCellsForTick();
-    if (!activeFlames.set.size) return { playerBurned: false, guardsBurned: 0 };
-    const survivors = [];
-    let guardsBurned = 0;
-    S.inagent.guards.forEach((guard) => {
-      if (activeFlames.set.has(inagentCellKey(guard.r, guard.c))) {
-        guardsBurned += 1;
-      } else {
-        survivors.push(guard);
-      }
-    });
-    if (guardsBurned) S.inagent.guards = survivors;
-    const playerBurned = !phaseStep && activeFlames.set.has(inagentCellKey(S.inagent.player.r, S.inagent.player.c));
-    return { playerBurned, guardsBurned };
+  function resolveInagentFlames() {
+    return { playerBurned: false, guardsBurned: 0 };
   }
 
   function showInagentTransition(nextLevel) {
@@ -825,6 +783,7 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     const phaseStep = !isAction && S.inagent.phaseActive;
     let nr = S.inagent.player.r;
     let nc = S.inagent.player.c;
+    let phaseOverlapGuardIds = new Set();
     if (!isAction) {
       nr = S.inagent.player.r + dr;
       nc = S.inagent.player.c + dc;
@@ -837,6 +796,13 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       }
       if (inagentOutOfBounds(nr, nc)) return;
       if (!phaseStep && inagentWall(nr, nc)) return;
+      if (phaseStep) {
+        phaseOverlapGuardIds = new Set(
+          S.inagent.guards
+            .filter((guard) => guard.r === nr && guard.c === nc)
+            .map((guard) => guard.id),
+        );
+      }
       S.inagent.phaseActive = false;
       S.inagent.player.r = nr;
       S.inagent.player.c = nc;
@@ -866,7 +832,17 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     S.inagent.flamerTick += 1;
     const guardsFrozenNow = S.inagent.guardsFrozen > 0;
     if (!guardsFrozenNow) {
-      S.inagent.guards.forEach(moveInagentGuard);
+      if (phaseOverlapGuardIds.size) {
+        S.inagent.guards.forEach((guard) => {
+          if (!phaseOverlapGuardIds.has(guard.id)) return;
+          guard.r = prevPlayer.r;
+          guard.c = prevPlayer.c;
+        });
+      }
+      S.inagent.guards.forEach((guard) => {
+        if (phaseOverlapGuardIds.has(guard.id)) return;
+        moveInagentGuard(guard);
+      });
     }
 
     const detonations = resolveInagentMines();
