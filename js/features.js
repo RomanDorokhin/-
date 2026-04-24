@@ -89,7 +89,15 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         '############',
       ],
       secret: { r: 2, c: 11 },
-      hiddenPassages: [{ r: 8, c: 2, entry: 'left' }],
+      hiddenPassages: [
+        { r: 8, c: 2, entries: [{ r: 8, c: 1 }], links: [{ r: 8, c: 3 }] },
+        { r: 8, c: 3, links: [{ r: 8, c: 2 }, { r: 8, c: 4 }] },
+        { r: 8, c: 4, links: [{ r: 8, c: 3 }, { r: 8, c: 5 }] },
+        { r: 8, c: 5, links: [{ r: 8, c: 4 }, { r: 8, c: 6 }] },
+        { r: 8, c: 6, links: [{ r: 8, c: 5 }, { r: 8, c: 7 }] },
+        { r: 8, c: 7, links: [{ r: 8, c: 6 }, { r: 7, c: 7 }] },
+        { r: 7, c: 7, links: [{ r: 8, c: 7 }], exits: [{ r: 7, c: 6 }, { r: 7, c: 8 }, { r: 6, c: 7 }] },
+      ],
       guards: [{ r: 6, c: 7 }],
       switches: [{ r: 5, c: 5, doors: [{ r: 4, c: 8 }] }],
       pickups: [
@@ -292,9 +300,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
         if (row && row[passage.c] !== '#') {
           issues.push(`Сектор ${levelIdx + 1}: тайный проход ${passageIdx + 1} должен быть спрятан в стене.`);
         }
-        if (passage.entry && !['left', 'right', 'up', 'down'].includes(passage.entry)) {
-          issues.push(`Сектор ${levelIdx + 1}: тайный проход ${passageIdx + 1} имеет неверное направление входа.`);
-        }
+        const validatePassageTargets = (targets, label) => {
+          (targets || []).forEach((target, targetIdx) => {
+            if (
+              target.r < 0 || target.r >= INAGENT_ROWS ||
+              target.c < 0 || target.c >= INAGENT_COLS
+            ) {
+              issues.push(`Сектор ${levelIdx + 1}: ${label} ${passageIdx + 1}.${targetIdx + 1} выходит за границы карты.`);
+            }
+          });
+        };
+        validatePassageTargets(passage.entries, 'вход туннеля');
+        validatePassageTargets(passage.links, 'связь туннеля');
+        validatePassageTargets(passage.exits, 'выход туннеля');
       });
       ensureInside(level.plans, 'планы');
       ensureInside(level.exit, 'выход');
@@ -357,24 +375,23 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
     return !!inagentHiddenPassageAt(r, c);
   }
 
-  function inagentHiddenPassageAllowsEntry(passage, fromR, fromC) {
-    if (!passage) return false;
-    const entry = passage.entry || 'left';
-    if (entry === 'left') return fromR === passage.r && fromC === passage.c - 1;
-    if (entry === 'right') return fromR === passage.r && fromC === passage.c + 1;
-    if (entry === 'up') return fromR === passage.r - 1 && fromC === passage.c;
-    if (entry === 'down') return fromR === passage.r + 1 && fromC === passage.c;
-    return false;
+  function inagentPassageTargetMatches(targets, r, c) {
+    return Array.isArray(targets) && targets.some((target) => target.r === r && target.c === c);
   }
 
-  function inagentHiddenPassageExitTarget(passage) {
+  function inagentHiddenPassageAllowsEntry(passage, fromR, fromC) {
+    if (!passage) return false;
+    return inagentPassageTargetMatches(passage.entries, fromR, fromC);
+  }
+
+  function inagentHiddenPassageAllowsExit(passage, toR, toC) {
     if (!passage) return null;
-    const entry = passage.entry || 'left';
-    if (entry === 'left') return { r: passage.r, c: passage.c - 1 };
-    if (entry === 'right') return { r: passage.r, c: passage.c + 1 };
-    if (entry === 'up') return { r: passage.r - 1, c: passage.c };
-    if (entry === 'down') return { r: passage.r + 1, c: passage.c };
-    return null;
+    return inagentPassageTargetMatches(passage.exits, toR, toC);
+  }
+
+  function inagentHiddenPassagesConnected(fromPassage, toR, toC) {
+    if (!fromPassage) return false;
+    return inagentPassageTargetMatches(fromPassage.links, toR, toC);
   }
 
   function inagentOutOfBounds(r, c) {
@@ -1118,11 +1135,12 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       if (inagentOutOfBounds(nr, nc)) return;
       const currentHiddenPassage = inagentHiddenPassageAt(S.inagent.player.r, S.inagent.player.c);
       const targetHiddenPassage = inagentHiddenPassageAt(nr, nc);
-      if (currentHiddenPassage && !targetHiddenPassage) {
-        const exitTarget = inagentHiddenPassageExitTarget(currentHiddenPassage);
-        if (!exitTarget || exitTarget.r !== nr || exitTarget.c !== nc) return;
+      if (currentHiddenPassage && targetHiddenPassage) {
+        if (!inagentHiddenPassagesConnected(currentHiddenPassage, nr, nc)) return;
+      } else if (currentHiddenPassage && !targetHiddenPassage) {
+        if (!inagentHiddenPassageAllowsExit(currentHiddenPassage, nr, nc)) return;
       }
-      if (targetHiddenPassage && !inagentHiddenPassageAllowsEntry(targetHiddenPassage, S.inagent.player.r, S.inagent.player.c)) {
+      if (!currentHiddenPassage && targetHiddenPassage && !inagentHiddenPassageAllowsEntry(targetHiddenPassage, S.inagent.player.r, S.inagent.player.c)) {
         return;
       }
       if (!phaseStep && !targetHiddenPassage && inagentWall(nr, nc)) return;
