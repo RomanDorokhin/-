@@ -770,7 +770,19 @@ function clearQuestMarks(cells = document.querySelectorAll('.noise-cell')) {
       return;
     }
     const left = S.inagent.lives;
+    const resourceSnapshot = {
+      phaseCharges: S.inagent.phaseCharges,
+      phaseCollected: S.inagent.phaseCollected,
+      mineCharges: S.inagent.mineCharges,
+      empCharges: S.inagent.empCharges,
+      collectedPickups: new Set(S.inagent.collectedPickups),
+    };
     resetInagentLevelState(S.inagent.level, { keepPickups: true });
+    S.inagent.phaseCharges = resourceSnapshot.phaseCharges;
+    S.inagent.phaseCollected = resourceSnapshot.phaseCollected;
+    S.inagent.mineCharges = resourceSnapshot.mineCharges;
+    S.inagent.empCharges = resourceSnapshot.empCharges;
+    S.inagent.collectedPickups = resourceSnapshot.collectedPickups;
     flashInagent(`ТЕБЯ ЗАМЕТИЛИ // -1 ЖИЗНЬ // ОСТАЛОСЬ: ${left}`);
     drawInagent();
     updateInagentHud();
