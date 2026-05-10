@@ -94,8 +94,11 @@ window.OMS = window.OMS || {};
   }
 
   function readProgress() {
+    let raw = null;
     try {
-      const raw = localStorage.getItem(C.SECRET_STORAGE_KEY);
+      raw = localStorage.getItem(C.SECRET_STORAGE_KEY);
+    } catch (e) {}
+    try {
       if (!raw) return { unlocked: [], discoveredAt: {}, sources: {} };
       const parsed = JSON.parse(raw);
       return {

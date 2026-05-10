@@ -232,6 +232,7 @@
       showIntroOverlay();
     }
     refs.introStartBtn.addEventListener('click', () => {
+      try { OMS.audioApi.initAudio(); } catch (e) {}
       state.introAccepted = true;
       try { localStorage.setItem(INTRO_STORAGE_KEY, '1'); } catch (e) {}
       hideIntroOverlay();
